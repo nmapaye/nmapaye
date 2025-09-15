@@ -17,8 +17,8 @@ Systems-leaning software engineer.
 C++20 (RAII, atomics, TMP) • FreeRTOS/ESP32 • React Native/TypeScript • CMake/CTest • GitHub Actions • ZAP/Burp
 
 ## Experience
-- **Bitera DC — Data Center Engineering Intern:** incident postmortems/SOPs, uptime checks, privately reported two high-severity web vulns.
+- **Bitera DC — Data Center Engineering Intern:** incident postmortems/SOPs, uptime checks, privately reported three high-severity web vulns.
 - **Xapiens Teknologi Indonesia — Cybersecurity Analyst Intern:** authenticated scanning, CVSS ≥8.0 triage, PoC-backed remediation + retests.
 
 ## Contact
-nmapaye@ucsc.edu • [LinkedIn](https://www.linkedin.com/in/_____) • [Website](https://nmapaye.carrd.co)
+nmapaye@ucsc.edu • [LinkedIn](https://www.linkedin.com/in/nathaniel-fransiscus-mapaye) • [Website](https://nmapaye.carrd.co)
