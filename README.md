@@ -1,7 +1,7 @@
 # Nathaniel Mapaye
 Systems-leaning software engineer. 
 
-![C++](https://img.shields.io/badge/C%2B%2B-20-informational)
+![C++](https://img.shields.io/badge/C%2B%2B-23-informational)
 ![FreeRTOS](https://img.shields.io/badge/RTOS-FreeRTOS-informational)
 ![React%20Native](https://img.shields.io/badge/React-Native-informational)
 ![CI](https://img.shields.io/badge/CI-GitHub%20Actions-informational)
