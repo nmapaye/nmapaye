@@ -2,6 +2,10 @@
 Systems-leaning software engineer. I build fast, reliable, well-tested software.
 
 **Focus:** C++ concurrency • Embedded FreeRTOS • React Native UX
+![C++](https://img.shields.io/badge/C%2B%2B-20-informational)
+![FreeRTOS](https://img.shields.io/badge/RTOS-FreeRTOS-informational)
+![React%20Native](https://img.shields.io/badge/React-Native-informational)
+![CI](https://img.shields.io/badge/CI-GitHub%20Actions-informational)
 
 ## Selected work
 - **SysLib (C++20):** header-only concurrency library — SPSC **26,987,335 ops/s** on Apple M-class (~**37 ns/op** p99). Lock-free MPMC (Michael–Scott + epoch reclamation); verified with ThreadSanitizer and linearizability checks. [Repo](https://github.com/nmapaye/syslib) 
@@ -17,8 +21,3 @@ C++20 (RAII, atomics, TMP) • FreeRTOS/ESP32 • React Native/TypeScript • CM
 
 ## Contact
 nmapaye@ucsc.edu • [LinkedIn](https://www.linkedin.com/in/_____) • [Website](https://nmapaye.carrd.co)
-
-![C++](https://img.shields.io/badge/C%2B%2B-20-informational)
-![FreeRTOS](https://img.shields.io/badge/RTOS-FreeRTOS-informational)
-![React%20Native](https://img.shields.io/badge/React-Native-informational)
-![CI](https://img.shields.io/badge/CI-GitHub%20Actions-informational)
