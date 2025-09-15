@@ -2,6 +2,7 @@
 Systems-leaning software engineer. I build fast, reliable, well-tested software.
 
 **Focus:** C++ concurrency • Embedded FreeRTOS • React Native UX
+
 ![C++](https://img.shields.io/badge/C%2B%2B-20-informational)
 ![FreeRTOS](https://img.shields.io/badge/RTOS-FreeRTOS-informational)
 ![React%20Native](https://img.shields.io/badge/React-Native-informational)
