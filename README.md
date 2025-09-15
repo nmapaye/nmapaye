@@ -1,5 +1,5 @@
 # Nathaniel Mapaye
-Systems-leaning software engineer. I build fast, reliable, well-tested software.
+Systems-leaning software engineer. 
 
 ![C++](https://img.shields.io/badge/C%2B%2B-20-informational)
 ![FreeRTOS](https://img.shields.io/badge/RTOS-FreeRTOS-informational)
