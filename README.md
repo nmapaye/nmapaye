@@ -2,7 +2,7 @@
 Systems-leaning software engineer. 
 
 ![C++](https://img.shields.io/badge/C%2B%2B-23-informational)
-![CI](https://img.shields.io/badge/Go-informational)
+![Go](https://img.shields.io/badge/Go-informational)
 ![FreeRTOS](https://img.shields.io/badge/RTOS-FreeRTOS-informational)
 ![React%20Native](https://img.shields.io/badge/React-Native-informational)
 ![CI](https://img.shields.io/badge/CI-GitHub%20Actions-informational)
