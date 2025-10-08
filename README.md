@@ -1,5 +1,7 @@
 # Nathaniel Mapaye
 Systems-leaning software engineer. 
+Current Projects:
+Panoptes, AURORA
 
 ![C++](https://img.shields.io/badge/C%2B%2B-23-informational)
 ![Go](https://img.shields.io/badge/Go-informational)
