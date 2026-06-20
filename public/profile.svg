@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 440" role="img" aria-label="Profile photo placeholder">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#dbeafe"/>
+      <stop offset="1" stop-color="#eef2ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="440" height="440" fill="url(#bg)"/>
+  <!-- simple silhouette -->
+  <circle cx="220" cy="170" r="78" fill="#94a3b8"/>
+  <path d="M80 400c0-77 63-140 140-140s140 63 140 140z" fill="#94a3b8"/>
+  <text x="50%" y="425" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+        font-size="20" fill="#475569" text-anchor="middle">replace public/profile.svg</text>
+</svg>

@@ -1,0 +1,98 @@
+---
+import { experience } from '../data/site';
+---
+
+<section id="experience" class="section">
+  <div class="container">
+    <h2 class="section__title">Experience</h2>
+    <ol class="timeline">
+      {
+        experience.map((item) => (
+          <li class="timeline__item">
+            <div class="timeline__head">
+              <h3 class="timeline__role">
+                {item.role} <span class="timeline__org">· {item.org}</span>
+              </h3>
+              <span class="timeline__period muted">{item.period}</span>
+            </div>
+            {item.location && <p class="timeline__loc muted">{item.location}</p>}
+            <ul class="timeline__bullets">
+              {item.bullets.map((b) => (
+                <li>{b}</li>
+              ))}
+            </ul>
+            {item.tools && (
+              <ul class="chips">
+                {item.tools.map((tool) => (
+                  <li class="chip">{tool}</li>
+                ))}
+              </ul>
+            )}
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</section>
+
+<style>
+  .timeline {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: var(--sp-12);
+  }
+
+  .timeline__item {
+    position: relative;
+    padding-left: var(--sp-6);
+    border-left: 2px solid var(--border);
+  }
+
+  .timeline__item::before {
+    content: '';
+    position: absolute;
+    left: -7px;
+    top: 6px;
+    width: 12px;
+    height: 12px;
+    border-radius: var(--radius-full);
+    background: var(--accent);
+    border: 2px solid var(--bg);
+  }
+
+  .timeline__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sp-2) var(--sp-4);
+  }
+
+  .timeline__role {
+    font-size: var(--fs-lg);
+  }
+
+  .timeline__org {
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .timeline__period {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    white-space: nowrap;
+  }
+
+  .timeline__loc {
+    font-size: var(--fs-sm);
+    margin-top: var(--sp-1);
+  }
+
+  .timeline__bullets {
+    margin-block: var(--sp-3);
+    display: grid;
+    gap: var(--sp-2);
+    font-size: var(--fs-sm);
+  }
+</style>

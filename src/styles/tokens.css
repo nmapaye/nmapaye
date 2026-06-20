@@ -1,0 +1,75 @@
+/* ============================================================================
+ *  DESIGN TOKENS — change the look of the whole site from here.
+ * ----------------------------------------------------------------------------
+ *  Edit the values below to re-theme: colors, fonts, spacing, radius, shadows.
+ *  A light theme is the default; the [data-theme="dark"] block overrides tokens
+ *  when dark mode is active (toggled in the nav, or via OS preference on load).
+ * ========================================================================== */
+
+:root {
+  /* --- palette (light) --------------------------------------------------- */
+  --bg: #fbfbfd;
+  --surface: #ffffff;
+  --surface-2: #f3f4f6;
+  --text: #18181b;
+  --muted: #6b7280;
+  --accent: #2563eb;
+  --accent-contrast: #ffffff;
+  --border: #e5e7eb;
+  --chip-bg: #eef2ff;
+  --chip-text: #3730a3;
+
+  /* --- typography -------------------------------------------------------- */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
+    Arial, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+    'Liberation Mono', monospace;
+
+  --fs-xs: 0.8125rem;
+  --fs-sm: 0.9375rem;
+  --fs-base: 1rem;
+  --fs-lg: 1.25rem;
+  --fs-xl: 1.75rem;
+  --fs-2xl: 2.5rem;
+  --fs-3xl: clamp(2.5rem, 6vw, 4rem);
+
+  --lh-tight: 1.2;
+  --lh-base: 1.65;
+
+  /* --- spacing scale ----------------------------------------------------- */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-6: 1.5rem;
+  --sp-8: 2rem;
+  --sp-12: 3rem;
+  --sp-16: 4rem;
+  --sp-24: 6rem;
+
+  /* --- shape & depth ----------------------------------------------------- */
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-full: 999px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+
+  /* --- layout ------------------------------------------------------------ */
+  --max-width: 64rem;
+  --nav-height: 4rem;
+}
+
+[data-theme='dark'] {
+  --bg: #0d0f12;
+  --surface: #15181d;
+  --surface-2: #1c2028;
+  --text: #e7e9ee;
+  --muted: #9aa3b2;
+  --accent: #6ea8fe;
+  --accent-contrast: #0d0f12;
+  --border: #272b33;
+  --chip-bg: #1e293b;
+  --chip-text: #bcd0ff;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+}

@@ -1,0 +1,89 @@
+---
+import { profile, links } from '../data/site';
+const base = import.meta.env.BASE_URL;
+const photo = `${base}/${profile.photo}`.replace(/\/+/g, '/');
+const resume = `${base}/${profile.resume}`.replace(/\/+/g, '/');
+---
+
+<section id="top" class="hero">
+  <div class="container hero__inner">
+    <div class="hero__text">
+      <p class="eyebrow">{profile.location}</p>
+      <h1 class="hero__name">{profile.name}</h1>
+      <p class="hero__title">{profile.title}</p>
+      <p class="hero__tagline">{profile.tagline}</p>
+
+      <div class="hero__cta">
+        <a class="btn btn--primary" href={`mailto:${links.email}`}>Get in touch</a>
+        <a class="btn" href={resume} target="_blank" rel="noopener">Resume (PDF)</a>
+        <a class="btn" href={links.github} target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+
+    <div class="hero__photo">
+      <!-- Replace public/profile.jpg with your own photo. -->
+      <img src={photo} alt={`Portrait of ${profile.shortName}`} width="220" height="220" />
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    padding-block: var(--sp-24) var(--sp-16);
+  }
+
+  .hero__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-12);
+  }
+
+  .hero__name {
+    font-size: var(--fs-3xl);
+    margin-top: var(--sp-2);
+  }
+
+  .hero__title {
+    font-size: var(--fs-lg);
+    font-weight: 600;
+    color: var(--accent);
+    margin-top: var(--sp-3);
+  }
+
+  .hero__tagline {
+    color: var(--muted);
+    font-size: var(--fs-lg);
+    max-width: 38ch;
+    margin-top: var(--sp-4);
+  }
+
+  .hero__cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-3);
+    margin-top: var(--sp-8);
+  }
+
+  .hero__photo img {
+    width: 220px;
+    height: 220px;
+    border-radius: var(--radius-full);
+    object-fit: cover;
+    border: 4px solid var(--surface);
+    box-shadow: var(--shadow);
+    background: var(--surface-2);
+  }
+
+  @media (max-width: 760px) {
+    .hero__inner {
+      flex-direction: column-reverse;
+      align-items: flex-start;
+      gap: var(--sp-8);
+    }
+    .hero__photo img {
+      width: 140px;
+      height: 140px;
+    }
+  }
+</style>

@@ -1,0 +1,21 @@
+---
+import { about } from '../data/site';
+---
+
+<section id="about" class="section">
+  <div class="container">
+    <h2 class="section__title">About</h2>
+    <div class="about__body">
+      {about.map((para) => <p>{para}</p>)}
+    </div>
+  </div>
+</section>
+
+<style>
+  .about__body {
+    max-width: 60ch;
+    display: grid;
+    gap: var(--sp-4);
+    font-size: var(--fs-lg);
+  }
+</style>

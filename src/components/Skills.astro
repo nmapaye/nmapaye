@@ -1,0 +1,40 @@
+---
+import { skills } from '../data/site';
+---
+
+<section id="skills" class="section">
+  <div class="container">
+    <h2 class="section__title">Skills</h2>
+    <div class="skills__grid">
+      {
+        skills.map((group) => (
+          <div class="skills__group">
+            <h3 class="skills__cat">{group.category}</h3>
+            <ul class="chips">
+              {group.items.map((item) => (
+                <li class="chip">{item}</li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .skills__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--sp-8);
+  }
+
+  .skills__cat {
+    font-size: var(--fs-base);
+    margin-bottom: var(--sp-4);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: var(--fs-xs);
+  }
+</style>

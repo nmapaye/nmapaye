@@ -1,0 +1,81 @@
+---
+import type { Project } from '../data/site';
+interface Props {
+  project: Project;
+}
+const { project } = Astro.props;
+---
+
+<article class="card project">
+  <header class="project__head">
+    <h3 class="project__name">{project.name}</h3>
+    {project.period && <span class="project__period muted">{project.period}</span>}
+  </header>
+  <p class="project__tagline">{project.tagline}</p>
+  <p class="project__desc muted">{project.description}</p>
+
+  <ul class="chips project__stack">
+    {project.stack.map((tech) => <li class="chip">{tech}</li>)}
+  </ul>
+
+  {
+    project.links && project.links.length > 0 && (
+      <div class="project__links">
+        {project.links.map((link) => (
+          <a href={link.href} target="_blank" rel="noopener">
+            {link.label} ↗
+          </a>
+        ))}
+      </div>
+    )
+  }
+</article>
+
+<style>
+  .project {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    height: 100%;
+  }
+
+  .project__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sp-3);
+  }
+
+  .project__name {
+    font-size: var(--fs-lg);
+  }
+
+  .project__period {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    white-space: nowrap;
+  }
+
+  .project__tagline {
+    font-weight: 600;
+    color: var(--accent);
+    font-size: var(--fs-sm);
+  }
+
+  .project__desc {
+    font-size: var(--fs-sm);
+  }
+
+  .project__stack {
+    margin-top: auto;
+    padding-top: var(--sp-2);
+  }
+
+  .project__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-4);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+  }
+</style>
