@@ -52,9 +52,9 @@ export const profile = {
   location: 'Santa Cruz, CA',
   tagline:
     'Building reliable systems across C++ concurrency, embedded FreeRTOS, and React Native UX.',
-  // Replace public/profile.svg with your own photo (square works best, e.g.
-  // profile.jpg) and update this path to match the new filename.
-  photo: 'profile.svg',
+  // Square photo lives at public/profile.jpg. Replace that file (keep the name)
+  // to swap your picture, or change this path to a new filename.
+  photo: 'profile.jpg',
   // Replace public/resume.pdf with your latest resume.
   resume: 'resume.pdf',
 };
