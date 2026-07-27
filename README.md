@@ -34,11 +34,12 @@ nmapaye@ucsc.edu • [LinkedIn](https://www.linkedin.com/in/nmapaye) • [Websit
 
 ```sh
 npm ci
+python3 -m pip install -r requirements-test.txt
+python3 scripts/build-resume.py public/resume.pdf
 npm run build
 npm run test:seo
 python3 scripts/test-resume.py
 ```
 
-The generated one-page résumé is committed at `public/resume.pdf`. Rebuild it with
-`python3 scripts/build-resume.py` after changing its source content, then rerun the
-résumé test.
+The generated one-page résumé is committed at `public/resume.pdf`. Rebuild and
+test it after changing its source content.

@@ -207,6 +207,7 @@ def build_resume(output_path: Path) -> None:
         title="Nathaniel Mapaye - Software Engineer Resume",
         author="Nathaniel Mapaye",
         pageCompression=1,
+        invariant=1,
     )
 
     story = [

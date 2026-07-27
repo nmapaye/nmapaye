@@ -61,7 +61,12 @@ export function createArticleGraph(article: ArticleIdentity) {
         description: article.description,
         datePublished: dateOnly(article.publishedDate),
         dateModified: dateOnly(article.updatedDate ?? article.publishedDate),
-        author: { '@id': personId },
+        author: {
+          '@type': 'Person',
+          '@id': personId,
+          name: profile.name,
+          url: profile.canonicalUrl,
+        },
         mainEntityOfPage: article.url,
         keywords: article.tags,
         isPartOf: {

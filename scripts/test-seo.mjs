@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const canonicalUrl = 'https://nmapaye.com/';
+const outputRoot = new URL('../dist/', import.meta.url);
 const articleUrl =
   'https://nmapaye.com/writing/aurora-private-caffeine-tracking/';
 const approvedProfiles = [
@@ -24,6 +25,23 @@ function getGraphNode(documents, type) {
   return documents
     .flatMap((document) => document['@graph'] ?? [document])
     .find((node) => node['@type'] === type);
+}
+
+async function getHtmlFiles(directory = outputRoot) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = [];
+
+  for (const entry of entries) {
+    const entryUrl = new URL(`${entry.name}${entry.isDirectory() ? '/' : ''}`, directory);
+
+    if (entry.isDirectory()) {
+      files.push(...(await getHtmlFiles(entryUrl)));
+    } else if (entry.name.endsWith('.html')) {
+      files.push(entryUrl);
+    }
+  }
+
+  return files;
 }
 
 test('homepage publishes one canonical professional identity', async () => {
@@ -53,12 +71,32 @@ test('homepage publishes one canonical professional identity', async () => {
   assert.deepEqual(person.sameAs, approvedProfiles);
 });
 
-test('homepage omits private and changing personal details', async () => {
-  const html = await readOutput('index.html');
+test('all public pages omit private and legacy identity details', async () => {
+  const htmlFiles = await getHtmlFiles();
 
-  assert.doesNotMatch(html, /\(831\)|831[-.)\s]*227[-\s]*4349/i);
-  assert.doesNotMatch(html, /\bGPA\b/i);
-  assert.doesNotMatch(html, /"birthDate"|"telephone"|"streetAddress"/);
+  assert.ok(htmlFiles.length > 0, 'expected generated HTML files');
+
+  for (const file of htmlFiles) {
+    const html = await readFile(file, 'utf8');
+    const message = `unexpected private or legacy detail in ${file.pathname}`;
+
+    assert.doesNotMatch(
+      html,
+      /(?:\+?1[\s.-]*)?(?:\(\d{3}\)|\d{3})[\s.-]+\d{3}[\s.-]+\d{4}/,
+      message,
+    );
+    assert.doesNotMatch(html, /\bGPA\b/i, message);
+    assert.doesNotMatch(
+      html,
+      /https:\/\/nmapaye\.github\.io\/nmapaye(?:\/|["'])/i,
+      message,
+    );
+    assert.doesNotMatch(
+      html,
+      /"(?:birthDate|telephone|streetAddress)"\s*:/i,
+      message,
+    );
+  }
 });
 
 test('homepage describes AURORA using its current on-device implementation', async () => {
@@ -109,8 +147,17 @@ test('AURORA case study publishes grounded BlogPosting authorship', async () => 
     'Building AURORA: Private Caffeine, Sleep, and Alertness Tracking',
   );
   assert.equal(article.datePublished, '2026-07-27');
-  assert.deepEqual(article.author, { '@id': `${canonicalUrl}#person` });
+  assert.deepEqual(article.author, {
+    '@type': 'Person',
+    '@id': `${canonicalUrl}#person`,
+    name: 'Nathaniel Mapaye',
+    url: canonicalUrl,
+  });
   assert.equal(article.mainEntityOfPage, articleUrl);
+  assert.match(
+    html,
+    />\s*By\s*<a[^>]+rel="author"[^>]*>Nathaniel Mapaye<\/a>/,
+  );
   assert.match(html, /HealthKit access is optional and read-only/);
   assert.match(html, /MMKV/);
   assert.doesNotMatch(html, /SQLite/);

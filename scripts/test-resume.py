@@ -25,7 +25,10 @@ class ResumeContractTests(unittest.TestCase):
         self.assertNotRegex(self.text, re.compile(r"\bGPA\b", re.IGNORECASE))
         self.assertNotRegex(
             self.text,
-            re.compile(r"\b831[-.)\s]*227[-\s]*4349\b", re.IGNORECASE),
+            re.compile(
+                r"(?:\+?1[\s.-]*)?(?:\(\d{3}\)|\d{3})"
+                r"[\s.-]+\d{3}[\s.-]+\d{4}"
+            ),
         )
 
 
