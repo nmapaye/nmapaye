@@ -35,3 +35,41 @@ export const identityGraph = {
     },
   ],
 };
+
+export interface ArticleIdentity {
+  url: string;
+  headline: string;
+  description: string;
+  publishedDate: Date;
+  updatedDate?: Date;
+  tags: string[];
+}
+
+function dateOnly(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+export function createArticleGraph(article: ArticleIdentity) {
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'BlogPosting',
+        '@id': `${article.url}#article`,
+        url: article.url,
+        headline: article.headline,
+        description: article.description,
+        datePublished: dateOnly(article.publishedDate),
+        dateModified: dateOnly(article.updatedDate ?? article.publishedDate),
+        author: { '@id': personId },
+        mainEntityOfPage: article.url,
+        keywords: article.tags,
+        isPartOf: {
+          '@type': 'Blog',
+          '@id': `${profile.canonicalUrl}writing/#blog`,
+          name: `${profile.name}'s writing`,
+        },
+      },
+    ],
+  };
+}

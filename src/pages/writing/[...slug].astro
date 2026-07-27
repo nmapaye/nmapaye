@@ -1,0 +1,112 @@
+---
+import { getCollection, type CollectionEntry } from 'astro:content';
+import Footer from '../../components/Footer.astro';
+import Nav from '../../components/Nav.astro';
+import { createArticleGraph } from '../../data/seo';
+import { profile } from '../../data/site';
+import Base from '../../layouts/Base.astro';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('writing', ({ data }) => !data.draft);
+  return posts.map((post) => ({
+    params: { slug: post.slug },
+    props: { post },
+  }));
+}
+
+interface Props {
+  post: CollectionEntry<'writing'>;
+}
+
+const { post } = Astro.props;
+const { Content } = await post.render();
+const articleUrl = new URL(`/writing/${post.slug}/`, profile.canonicalUrl).href;
+const structuredData = createArticleGraph({
+  url: articleUrl,
+  headline: post.data.title,
+  description: post.data.description,
+  publishedDate: post.data.publishedDate,
+  updatedDate: post.data.updatedDate,
+  tags: post.data.tags,
+});
+const formatDate = (date: Date) =>
+  new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'long',
+    timeZone: 'UTC',
+  }).format(date);
+---
+
+<Base
+  title={`${post.data.title} — ${profile.name}`}
+  description={post.data.description}
+  ogType="article"
+  structuredData={structuredData}
+>
+  <Nav />
+  <main>
+    <article class="article container">
+      <a class="article__back" href="/writing/">← All writing</a>
+      <header class="article__header">
+        <p class="eyebrow">{formatDate(post.data.publishedDate)}</p>
+        <h1>{post.data.title}</h1>
+        <p class="article__dek">{post.data.description}</p>
+        <ul class="chips" aria-label="Topics">
+          {post.data.tags.map((tag) => <li class="chip">{tag}</li>)}
+        </ul>
+      </header>
+      <div class="article__body">
+        <Content />
+      </div>
+    </article>
+  </main>
+  <Footer />
+</Base>
+
+<style>
+  .article {
+    max-width: 760px;
+    padding-block: var(--sp-12) var(--sp-24);
+  }
+
+  .article__back {
+    display: inline-block;
+    margin-bottom: var(--sp-10);
+    font-size: var(--fs-sm);
+  }
+
+  .article__header h1 {
+    font-size: clamp(2.2rem, 8vw, var(--fs-3xl));
+    line-height: 1.08;
+    margin-top: var(--sp-3);
+  }
+
+  .article__dek {
+    color: var(--muted);
+    font-size: var(--fs-lg);
+    margin-block: var(--sp-5);
+  }
+
+  .article__body {
+    margin-top: var(--sp-12);
+    font-size: 1.05rem;
+    line-height: 1.75;
+  }
+
+  .article__body :global(h2) {
+    margin-block: var(--sp-12) var(--sp-4);
+    font-size: var(--fs-xl);
+  }
+
+  .article__body :global(p),
+  .article__body :global(ul) {
+    margin-top: var(--sp-5);
+  }
+
+  .article__body :global(ul) {
+    padding-left: var(--sp-6);
+  }
+
+  .article__body :global(li + li) {
+    margin-top: var(--sp-2);
+  }
+</style>

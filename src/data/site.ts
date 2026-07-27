@@ -74,12 +74,11 @@ export const about = [
 
 /* ------------------------------------------------------------------- nav -- */
 export const nav: NavItem[] = [
-  { label: 'About', href: '#about' },
-  { label: 'Projects', href: '#projects' },
-  { label: 'Experience', href: '#experience' },
-  { label: 'Education', href: '#education' },
-  { label: 'Skills', href: '#skills' },
-  { label: 'Contact', href: '#contact' },
+  { label: 'About', href: '/#about' },
+  { label: 'Projects', href: '/#projects' },
+  { label: 'Experience', href: '/#experience' },
+  { label: 'Writing', href: '/writing/' },
+  { label: 'Contact', href: '/#contact' },
 ];
 
 /* ------------------------------------------------------------------ links -- */
@@ -111,9 +110,12 @@ export const projects: Project[] = [
     tagline: 'React Native Caffeine Tracker',
     period: 'Aug 2025 — Present',
     description:
-      'Featured by Handshake in OpenAI’s Codex Competition. A mobile app integrating native AI-based features with Apple HealthKit to autonomously monitor caffeine intake; tracking dashboards and psycho-vigilance tests visualize consumption patterns and measure alertness. HealthKit read/write with permission flows; offline-first state (AsyncStorage/SQLite) with unit normalization for accurate mg totals.',
-    stack: ['React Native', 'TypeScript', 'HealthKit', 'SQLite', 'EAS'],
-    links: [{ label: 'Live demo', href: 'https://nmapaye.github.io/aurora' }],
+      'An iPhone and iPad app connecting caffeine timing, sleep, and alertness. It supports manual logging, optional, read-only Apple Health sleep import, a 60-second vigilance test, and private on-device insights persisted with MMKV.',
+    stack: ['React Native', 'TypeScript', 'HealthKit', 'MMKV', 'Zustand'],
+    links: [
+      { label: 'Case study', href: '/writing/aurora-private-caffeine-tracking/' },
+      { label: 'Live demo', href: 'https://nmapaye.github.io/aurora' },
+    ],
   },
   {
     name: 'EmbNode',

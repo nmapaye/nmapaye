@@ -6,12 +6,14 @@ import { profile } from '../data/site';
 interface Props {
   title?: string;
   description?: string;
+  ogType?: 'website' | 'article';
   structuredData?: Record<string, unknown>;
 }
 
 const {
   title = `${profile.name} — ${profile.title}`,
   description = profile.description,
+  ogType = 'website',
   structuredData,
 } = Astro.props;
 
@@ -31,7 +33,7 @@ const ogImage = new URL(`${base}/${profile.image}`.replace(/\/+/g, '/'), Astro.s
     <link rel="canonical" href={canonical} />
 
     <!-- Open Graph / social -->
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={ogType} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />

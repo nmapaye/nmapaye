@@ -3,6 +3,8 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const canonicalUrl = 'https://nmapaye.com/';
+const articleUrl =
+  'https://nmapaye.com/writing/aurora-private-caffeine-tracking/';
 const approvedProfiles = [
   'https://www.linkedin.com/in/nmapaye',
   'https://github.com/nmapaye',
@@ -59,6 +61,14 @@ test('homepage omits private and changing personal details', async () => {
   assert.doesNotMatch(html, /"birthDate"|"telephone"|"streetAddress"/);
 });
 
+test('homepage describes AURORA using its current on-device implementation', async () => {
+  const html = await readOutput('index.html');
+
+  assert.match(html, /optional, read-only Apple Health sleep import/i);
+  assert.match(html, /MMKV/);
+  assert.doesNotMatch(html, /SQLite/);
+});
+
 test('crawler discovery files point at the canonical domain', async () => {
   const [robots, sitemap] = await Promise.all([
     readOutput('robots.txt'),
@@ -68,4 +78,50 @@ test('crawler discovery files point at the canonical domain', async () => {
   assert.match(robots, /^User-agent: \*\nAllow: \/\n/m);
   assert.match(robots, /Sitemap: https:\/\/nmapaye\.com\/sitemap-index\.xml/);
   assert.match(sitemap, /https:\/\/nmapaye\.com\/sitemap-0\.xml/);
+});
+
+test('writing index publishes the AURORA case study', async () => {
+  const html = await readOutput('writing/index.html');
+
+  assert.match(
+    html,
+    /href="\/writing\/aurora-private-caffeine-tracking\/?"/,
+    'writing index must link to the AURORA case study',
+  );
+  assert.match(html, /Building AURORA: Private Caffeine, Sleep, and Alertness Tracking/);
+});
+
+test('AURORA case study publishes grounded BlogPosting authorship', async () => {
+  const html = await readOutput(
+    'writing/aurora-private-caffeine-tracking/index.html',
+  );
+  const documents = getJsonLdDocuments(html);
+  const article = getGraphNode(documents, 'BlogPosting');
+
+  assert.match(
+    html,
+    /<link rel="canonical" href="https:\/\/nmapaye\.com\/writing\/aurora-private-caffeine-tracking\/">/,
+  );
+  assert.ok(article, 'case study must publish a BlogPosting JSON-LD node');
+  assert.equal(article['@id'], `${articleUrl}#article`);
+  assert.equal(
+    article.headline,
+    'Building AURORA: Private Caffeine, Sleep, and Alertness Tracking',
+  );
+  assert.equal(article.datePublished, '2026-07-27');
+  assert.deepEqual(article.author, { '@id': `${canonicalUrl}#person` });
+  assert.equal(article.mainEntityOfPage, articleUrl);
+  assert.match(html, /HealthKit access is optional and read-only/);
+  assert.match(html, /MMKV/);
+  assert.doesNotMatch(html, /SQLite/);
+});
+
+test('sitemap includes the writing index and AURORA case study', async () => {
+  const sitemap = await readOutput('sitemap-0.xml');
+
+  assert.match(sitemap, /https:\/\/nmapaye\.com\/writing\/<\/loc>/);
+  assert.match(
+    sitemap,
+    /https:\/\/nmapaye\.com\/writing\/aurora-private-caffeine-tracking\/<\/loc>/,
+  );
 });

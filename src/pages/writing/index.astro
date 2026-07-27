@@ -1,0 +1,87 @@
+---
+import { getCollection } from 'astro:content';
+import Footer from '../../components/Footer.astro';
+import Nav from '../../components/Nav.astro';
+import Base from '../../layouts/Base.astro';
+import { profile } from '../../data/site';
+
+const posts = (await getCollection('writing', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.publishedDate.valueOf() - a.data.publishedDate.valueOf());
+
+const formatDate = (date: Date) =>
+  new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'long',
+    timeZone: 'UTC',
+  }).format(date);
+---
+
+<Base
+  title={`Writing — ${profile.name}`}
+  description={`Technical case studies and engineering notes by ${profile.name}.`}
+>
+  <Nav />
+  <main class="writing-index">
+    <div class="container">
+      <p class="eyebrow">Engineering notes</p>
+      <h1>Writing</h1>
+      <p class="writing-index__intro">
+        Technical case studies about systems, embedded software, mobile
+        applications, and the tradeoffs behind them.
+      </p>
+
+      <ol class="writing-index__list">
+        {posts.map((post) => (
+          <li>
+            <article class="card writing-card">
+              <p class="eyebrow">{formatDate(post.data.publishedDate)}</p>
+              <h2>
+                <a href={`/writing/${post.slug}/`}>{post.data.title}</a>
+              </h2>
+              <p class="muted">{post.data.description}</p>
+              <ul class="chips" aria-label="Topics">
+                {post.data.tags.map((tag) => <li class="chip">{tag}</li>)}
+              </ul>
+            </article>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </main>
+  <Footer />
+</Base>
+
+<style>
+  .writing-index {
+    padding-block: var(--sp-16) var(--sp-24);
+    min-height: 70vh;
+  }
+
+  .writing-index h1 {
+    font-size: var(--fs-3xl);
+    margin-top: var(--sp-2);
+  }
+
+  .writing-index__intro {
+    color: var(--muted);
+    font-size: var(--fs-lg);
+    max-width: 54ch;
+    margin-top: var(--sp-4);
+  }
+
+  .writing-index__list {
+    list-style: none;
+    display: grid;
+    gap: var(--sp-6);
+    margin-top: var(--sp-12);
+    padding: 0;
+  }
+
+  .writing-card h2 {
+    margin-block: var(--sp-2) var(--sp-3);
+    font-size: var(--fs-xl);
+  }
+
+  .writing-card .chips {
+    margin-top: var(--sp-5);
+  }
+</style>
