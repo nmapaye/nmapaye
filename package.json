@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "test:seo": "astro build && node --test scripts/test-seo.mjs",
     "preview": "astro preview",
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/sitemap": "3.2.1",
     "astro": "^4.16.18"
   },
   "devDependencies": {

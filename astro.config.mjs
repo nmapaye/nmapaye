@@ -1,11 +1,9 @@
 import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
 
-// Deployed to GitHub Pages as a project site: https://nmapaye.github.io/nmapaye
-// If you later move to a custom domain (e.g. nmapaye.com), set `site` to it and
-// remove `base` (or set it to '/').
 export default defineConfig({
-  site: 'https://nmapaye.github.io',
-  base: '/nmapaye',
+  site: 'https://nmapaye.com',
+  integrations: [sitemap()],
   output: 'static',
   trailingSlash: 'ignore',
 });

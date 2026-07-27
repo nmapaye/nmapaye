@@ -1,7 +1,7 @@
 ---
 import { profile, links } from '../data/site';
 const base = import.meta.env.BASE_URL;
-const photo = `${base}/${profile.photo}`.replace(/\/+/g, '/');
+const photo = `${base}/${profile.image}`.replace(/\/+/g, '/');
 const resume = `${base}/${profile.resume}`.replace(/\/+/g, '/');
 ---
 
@@ -22,7 +22,7 @@ const resume = `${base}/${profile.resume}`.replace(/\/+/g, '/');
 
     <div class="hero__photo">
       <!-- Replace public/profile.jpg with your own photo. -->
-      <img src={photo} alt={`Portrait of ${profile.shortName}`} width="220" height="220" />
+      <img src={photo} alt={`Portrait of ${profile.name}`} width="220" height="220" />
     </div>
   </div>
 </section>

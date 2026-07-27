@@ -46,22 +46,29 @@ export interface EducationItem {
 
 /* ---------------------------------------------------------------- profile -- */
 export const profile = {
-  name: 'Nathaniel Fransiscus Mapaye',
-  shortName: 'Nathaniel Mapaye',
-  title: 'Systems-leaning Software Engineer',
+  name: 'Nathaniel Mapaye',
+  fullName: 'Nathaniel Fransiscus Mapaye',
+  canonicalUrl: 'https://nmapaye.com/',
+  title: 'Software Engineer',
   location: 'Santa Cruz, CA',
+  description:
+    'Software engineer building reliable systems across embedded software, concurrent C++, and mobile applications.',
   tagline:
     'Building reliable systems across C++ concurrency, embedded FreeRTOS, and React Native UX.',
   // Square photo lives at public/profile.jpg. Replace that file (keep the name)
   // to swap your picture, or change this path to a new filename.
-  photo: 'profile.jpg',
+  image: 'profile.jpg',
   // Replace public/resume.pdf with your latest resume.
   resume: 'resume.pdf',
+  sameAs: [
+    'https://www.linkedin.com/in/nmapaye',
+    'https://github.com/nmapaye',
+  ],
 };
 
 /* ------------------------------------------------------------------ about -- */
 export const about = [
-  'I’m a Technology & Information Management student at UC Santa Cruz who likes building things close to the metal and shipping them all the way to a clean UI.',
+  'I’m Nathaniel Fransiscus Mapaye, a Technology & Information Management student at UC Santa Cruz who likes building things close to the metal and shipping them all the way to a clean UI.',
   'My work spans low-level C++ concurrency and embedded FreeRTOS firmware up through cross-platform React Native apps — with a recurring detour into security testing and remediation.',
 ];
 
@@ -78,8 +85,7 @@ export const nav: NavItem[] = [
 /* ------------------------------------------------------------------ links -- */
 export const links = {
   email: 'nmapaye@ucsc.edu',
-  phone: '(831)-227-4349',
-  linkedin: 'https://linkedin.com/in/nmapaye',
+  linkedin: 'https://www.linkedin.com/in/nmapaye',
   github: 'https://github.com/nmapaye',
   aurora: 'https://nmapaye.github.io/aurora',
 };
@@ -88,7 +94,7 @@ export const links = {
 export const education: EducationItem[] = [
   {
     school: 'University of California, Santa Cruz',
-    degree: 'B.S., Technology & Information Management (TIM) — GPA 3.67 / 4.0',
+    degree: 'B.S., Technology & Information Management (TIM)',
     period: 'Jul 2023 — Jun 2027',
     location: 'Santa Cruz, CA',
     details: [

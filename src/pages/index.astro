@@ -9,9 +9,10 @@ import Education from '../components/Education.astro';
 import Skills from '../components/Skills.astro';
 import Contact from '../components/Contact.astro';
 import Footer from '../components/Footer.astro';
+import { identityGraph } from '../data/seo';
 ---
 
-<Base>
+<Base structuredData={identityGraph}>
   <Nav />
   <main>
     <Hero />

@@ -4,7 +4,7 @@ import { nav, profile } from '../data/site';
 
 <header class="nav">
   <div class="container nav__inner">
-    <a href="#top" class="nav__brand">{profile.shortName}</a>
+    <a href="#top" class="nav__brand">{profile.name}</a>
 
     <nav class="nav__links" aria-label="Primary">
       {nav.map((item) => <a href={item.href}>{item.label}</a>)}

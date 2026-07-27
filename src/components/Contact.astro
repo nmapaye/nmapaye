@@ -14,7 +14,6 @@ const resume = `${base}/${profile.resume}`.replace(/\/+/g, '/');
 
     <div class="contact__links">
       <a class="btn btn--primary" href={`mailto:${links.email}`}>{links.email}</a>
-      <a class="btn" href={`tel:${links.phone.replace(/[^+\d]/g, '')}`}>{links.phone}</a>
       <a class="btn" href={links.linkedin} target="_blank" rel="noopener">LinkedIn</a>
       <a class="btn" href={links.github} target="_blank" rel="noopener">GitHub</a>
       <a class="btn" href={resume} target="_blank" rel="noopener">Resume (PDF)</a>
