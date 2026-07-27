@@ -45,8 +45,8 @@ export interface ArticleIdentity {
   tags: string[];
 }
 
-function dateOnly(date: Date) {
-  return date.toISOString().slice(0, 10);
+function schemaDateTime(date: Date) {
+  return date.toISOString();
 }
 
 export function createArticleGraph(article: ArticleIdentity) {
@@ -59,8 +59,9 @@ export function createArticleGraph(article: ArticleIdentity) {
         url: article.url,
         headline: article.headline,
         description: article.description,
-        datePublished: dateOnly(article.publishedDate),
-        dateModified: dateOnly(article.updatedDate ?? article.publishedDate),
+        image: new URL(profile.image, profile.canonicalUrl).href,
+        datePublished: schemaDateTime(article.publishedDate),
+        dateModified: schemaDateTime(article.updatedDate ?? article.publishedDate),
         author: {
           '@type': 'Person',
           '@id': personId,

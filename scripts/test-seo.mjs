@@ -146,7 +146,9 @@ test('AURORA case study publishes grounded BlogPosting authorship', async () => 
     article.headline,
     'Building AURORA: Private Caffeine, Sleep, and Alertness Tracking',
   );
-  assert.equal(article.datePublished, '2026-07-27');
+  assert.equal(article.datePublished, '2026-07-27T00:00:00.000Z');
+  assert.equal(article.dateModified, '2026-07-27T00:00:00.000Z');
+  assert.equal(article.image, `${canonicalUrl}profile.jpg`);
   assert.deepEqual(article.author, {
     '@type': 'Person',
     '@id': `${canonicalUrl}#person`,
