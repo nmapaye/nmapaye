@@ -19,3 +19,6 @@ yarn-error.log*
 .env.production
 .DS_Store
 .vscode/
+
+# isolated feature worktrees
+.worktrees/
