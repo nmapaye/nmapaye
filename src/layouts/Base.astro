@@ -27,7 +27,18 @@ const ogImage = new URL(`${base}/${profile.image}`.replace(/\/+/g, '/'), Astro.s
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`.replace(/\/+/g, '/')} />
+    <link rel="icon" href={`${base}/favicon.ico`.replace(/\/+/g, '/')} sizes="any" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href={`${base}/favicon-32.png`.replace(/\/+/g, '/')}
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href={`${base}/apple-touch-icon.png`.replace(/\/+/g, '/')}
+    />
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />

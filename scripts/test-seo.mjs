@@ -174,3 +174,22 @@ test('sitemap includes the writing index and AURORA case study', async () => {
     /https:\/\/nmapaye\.com\/writing\/aurora-private-caffeine-tracking\/<\/loc>/,
   );
 });
+
+test('all pages publish the deer favicon assets', async () => {
+  const htmlFiles = await getHtmlFiles();
+
+  for (const file of htmlFiles) {
+    const html = await readFile(file, 'utf8');
+
+    assert.match(html, /<link rel="icon" href="\/favicon\.ico" sizes="any">/);
+    assert.match(
+      html,
+      /<link rel="icon" type="image\/png" sizes="32x32" href="\/favicon-32\.png">/,
+    );
+    assert.match(
+      html,
+      /<link rel="apple-touch-icon" sizes="180x180" href="\/apple-touch-icon\.png">/,
+    );
+    assert.doesNotMatch(html, /favicon\.svg/);
+  }
+});
