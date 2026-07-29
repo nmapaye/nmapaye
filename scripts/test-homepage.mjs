@@ -81,7 +81,7 @@ export function extractMaxWidthMediaBlocks(css, maxWidth) {
     }
 
     if (depth === 0) blocks.push(css.slice(blockOpen + 1, cursor));
-    index = cursor;
+    index = cursor - 1;
   }
 
   return blocks;
@@ -110,6 +110,16 @@ test('media block extraction scopes matching CSS and preserves quoted content', 
   assert.equal(blocks.length, 1);
   assert.match(blocks[0], /content:\s*"quoted } \\"value\\""/);
   assert.doesNotMatch(blocks[0], /out-of-media|\.other/);
+});
+
+test('media block extraction keeps immediately adjacent matching blocks in order', () => {
+  const css = '@media (max-width: 420px){.first{--marker:first}}@media (max-width: 420px){.second{--marker:second}}@media (max-width: 420px){.third{--marker:third}}';
+  const blocks = extractMaxWidthMediaBlocks(css, 420);
+
+  assert.deepEqual(
+    blocks.map((block) => block.match(/--marker:[^;}]+/)?.[0]),
+    ['--marker:first', '--marker:second', '--marker:third'],
+  );
 });
 
 test('approved portfolio photos are stored locally', async () => {
@@ -548,6 +558,10 @@ test('built experience chapter uses the approved compact mobile layout', async (
   );
   assert.equal((experienceChapter.match(/class="experience__index"/g) ?? []).length, 4);
   assert.equal((experienceChapter.match(/class="experience__credentials"/g) ?? []).length, 1);
+  assert.match(
+    experienceChapter,
+    /<p class="chapter__label"[^>]*>Selected tools<\/p>\s*<ul role="list"[^>]*>/,
+  );
 });
 
 test('homepage renders the final issue architecture without legacy chapters', async () => {
