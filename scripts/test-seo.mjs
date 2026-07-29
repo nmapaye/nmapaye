@@ -6,6 +6,10 @@ const canonicalUrl = 'https://nmapaye.com/';
 const outputRoot = new URL('../dist/', import.meta.url);
 const articleUrl =
   'https://nmapaye.com/writing/aurora-private-caffeine-tracking/';
+const socialImageUrl = 'https://nmapaye.com/og.png';
+const socialImageWidth = 1731;
+const socialImageHeight = 909;
+const socialImageAlt = 'Nathaniel Mapaye — Software Engineer portfolio';
 const approvedProfiles = [
   'https://www.linkedin.com/in/nmapaye',
   'https://github.com/nmapaye',
@@ -43,6 +47,60 @@ async function getHtmlFiles(directory = outputRoot) {
 
   return files;
 }
+
+function getHtmlAttribute(tag, attribute) {
+  const match = tag.match(
+    new RegExp(`\\s${attribute}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>\`]+))`, 'i'),
+  );
+
+  return match?.[1] ?? match?.[2] ?? match?.[3];
+}
+
+function getMetaValues(html, attribute, name) {
+  return [...html.matchAll(/<meta\b[^>]*>/gi)]
+    .filter((match) => getHtmlAttribute(match[0], attribute)?.toLowerCase() === name)
+    .map((match) => getHtmlAttribute(match[0], 'content'));
+}
+
+function assertSingleMetaValue(html, attribute, name, expected, message) {
+  const values = getMetaValues(html, attribute, name);
+
+  assert.equal(values.length, 1, `${message}: expected exactly one ${name} meta tag`);
+  assert.equal(values[0], expected, `${message}: ${name} must match the shared value`);
+}
+
+test('branded social image is copied with the approved PNG dimensions', async () => {
+  const image = await readFile(new URL('../dist/og.png', import.meta.url));
+
+  assert.deepEqual(
+    image.subarray(0, 8),
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    'social image must be a PNG',
+  );
+  assert.equal(image.readUInt32BE(8), 13, 'IHDR chunk must be present');
+  assert.equal(image.toString('ascii', 12, 16), 'IHDR');
+  assert.equal(image.readUInt32BE(16), socialImageWidth);
+  assert.equal(image.readUInt32BE(20), socialImageHeight);
+});
+
+test('all public pages publish the branded social preview', async () => {
+  const htmlFiles = await getHtmlFiles();
+
+  assert.ok(htmlFiles.length > 0, 'expected generated HTML files');
+
+  for (const file of htmlFiles) {
+    const html = await readFile(file, 'utf8');
+    const message = `missing branded social preview metadata in ${file.pathname}`;
+
+    assertSingleMetaValue(html, 'property', 'og:image', socialImageUrl, message);
+    assertSingleMetaValue(html, 'property', 'og:image:width', String(socialImageWidth), message);
+    assertSingleMetaValue(html, 'property', 'og:image:height', String(socialImageHeight), message);
+    assertSingleMetaValue(html, 'property', 'og:image:alt', socialImageAlt, message);
+    assertSingleMetaValue(html, 'name', 'twitter:card', 'summary_large_image', message);
+    assertSingleMetaValue(html, 'name', 'twitter:image', socialImageUrl, message);
+    assertSingleMetaValue(html, 'name', 'twitter:image:alt', socialImageAlt, message);
+  }
+});
 
 test('homepage publishes one canonical professional identity', async () => {
   const html = await readOutput('index.html');

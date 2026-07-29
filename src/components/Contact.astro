@@ -1,37 +1,85 @@
 ---
+import { Image } from 'astro:assets';
+import contactPhoto from '../assets/portfolio/contact-portrait.png';
 import { links, profile } from '../data/site';
 const base = import.meta.env.BASE_URL;
 const resume = `${base}/${profile.resume}`.replace(/\/+/g, '/');
 ---
 
-<section id="contact" class="section contact">
-  <div class="container">
-    <h2 class="section__title">Contact</h2>
-    <p class="contact__lead">
-      Open to internships and new-grad roles in systems, embedded, and full-stack
-      engineering. The fastest way to reach me is email.
-    </p>
-
+<section id="contact" class="chapter contact" aria-labelledby="contact-title">
+  <div class="contact__copy">
+    <p class="chapter__label">04 / Contact</p>
+    <h2 id="contact-title" class="display">Let’s build.</h2>
+    <p>Open to internships and early-career software roles across systems, security, and product engineering.</p>
     <div class="contact__links">
-      <a class="btn btn--primary" href={`mailto:${links.email}`}>{links.email}</a>
-      <a class="btn" href={links.linkedin} target="_blank" rel="noopener">LinkedIn</a>
-      <a class="btn" href={links.github} target="_blank" rel="noopener">GitHub</a>
-      <a class="btn" href={resume} target="_blank" rel="noopener">Resume (PDF)</a>
+      <a class="btn btn--primary" href={`mailto:${links.email}`}>Email</a>
+      <a class="btn" href={resume}>Resume</a>
+      <a class="btn" href={links.linkedin} rel="noopener">LinkedIn</a>
+      <a class="btn" href={links.github} rel="noopener">GitHub</a>
     </div>
+  </div>
+  <div class="contact__portrait">
+    <Image
+      src={contactPhoto}
+      alt="Portrait of Nathaniel Mapaye"
+      widths={[320, 480, 640]}
+      sizes="(max-width: 639px) 75vw, (max-width: 959px) 15rem, 24vw"
+      format="webp"
+      quality={82}
+      loading="lazy"
+    />
   </div>
 </section>
 
 <style>
-  .contact__lead {
-    max-width: 52ch;
-    font-size: var(--fs-lg);
-    color: var(--muted);
-    margin-bottom: var(--sp-8);
+  .contact {
+    padding: clamp(2rem, 6vw, 5rem) max(1rem, calc((100vw - var(--max-width)) / 2));
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(15rem, 0.35fr);
+    gap: clamp(2rem, 6vw, 5rem);
+    align-items: end;
+    background: var(--yellow);
+  }
+
+  .contact__copy h2 {
+    margin-block: 1rem;
+    font-size: clamp(4rem, 12vw, 10rem);
+  }
+
+  .contact__copy > p:not(.chapter__label) {
+    max-width: 48ch;
+    font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+    font-weight: 700;
   }
 
   .contact__links {
+    margin-top: 2rem;
     display: flex;
     flex-wrap: wrap;
-    gap: var(--sp-3);
+    gap: 0.75rem;
+  }
+
+  .contact__portrait {
+    border: var(--rule);
+    background: var(--paper);
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    transform: rotate(2deg);
+  }
+
+  .contact__portrait :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  @media (max-width: 639px) {
+    .contact {
+      grid-template-columns: 1fr;
+    }
+
+    .contact__portrait {
+      width: min(18rem, 75vw);
+    }
   }
 </style>

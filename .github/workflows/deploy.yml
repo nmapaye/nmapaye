@@ -45,11 +45,8 @@ jobs:
       - name: Generate public résumé
         run: python scripts/build-resume.py public/resume.pdf
 
-      - name: Build
-        run: npm run build
-
-      - name: Test SEO contract
-        run: npm run test:seo
+      - name: Test site
+        run: npm test
 
       - name: Test public resume
         run: python scripts/test-resume.py

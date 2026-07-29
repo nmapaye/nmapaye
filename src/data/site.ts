@@ -10,13 +10,22 @@
 
 export interface NavItem {
   label: string;
-  href: string; // in-page anchor, e.g. "#projects"
+  href: string; // in-page anchor, e.g. "/#work"
+}
+
+export interface ProjectMetric {
+  value: string;
+  label: string;
 }
 
 export interface Project {
+  index: string;
   name: string;
   tagline: string;
   description: string;
+  facts: string[];
+  metrics?: ProjectMetric[];
+  featured?: boolean;
   period?: string;
   stack: string[];
   links?: { label: string; href: string }[];
@@ -29,11 +38,6 @@ export interface ExperienceItem {
   location?: string;
   bullets: string[];
   tools?: string[];
-}
-
-export interface SkillGroup {
-  category: string;
-  items: string[];
 }
 
 export interface EducationItem {
@@ -52,9 +56,9 @@ export const profile = {
   title: 'Software Engineer',
   location: 'Santa Cruz, CA',
   description:
-    'Software engineer building reliable systems across embedded software, concurrent C++, and mobile applications.',
+    'Software engineer building from low-level systems and security to polished products.',
   tagline:
-    'Building reliable systems across C++ concurrency, embedded FreeRTOS, and React Native UX.',
+    'Software engineer building from low-level systems to polished products.',
   // Square photo lives at public/profile.jpg. Replace that file (keep the name)
   // to swap your picture, or change this path to a new filename.
   image: 'profile.jpg',
@@ -66,19 +70,29 @@ export const profile = {
   ],
 };
 
-/* ------------------------------------------------------------------ about -- */
-export const about = [
-  'I’m Nathaniel Fransiscus Mapaye, a Technology & Information Management student at UC Santa Cruz who likes building things close to the metal and shipping them all the way to a clean UI.',
-  'My work spans low-level C++ concurrency and embedded FreeRTOS firmware up through cross-platform React Native apps — with a recurring detour into security testing and remediation.',
-];
-
 /* ------------------------------------------------------------------- nav -- */
 export const nav: NavItem[] = [
-  { label: 'About', href: '/#about' },
-  { label: 'Projects', href: '/#projects' },
+  { label: 'Work', href: '/#work' },
   { label: 'Experience', href: '/#experience' },
-  { label: 'Writing', href: '/writing/' },
+  { label: 'Notes', href: '/writing/' },
   { label: 'Contact', href: '/#contact' },
+];
+
+export const featuredSkills = [
+  'C++23',
+  'FreeRTOS',
+  'ESP32 / STM32',
+  'Linux',
+  'Burp Suite',
+  'Nessus',
+  'OWASP TG',
+  'CVSS triage',
+  'React Native',
+  'TypeScript / JavaScript',
+  'Docker',
+  'Kubernetes',
+  'Prometheus',
+  'GitHub Actions',
 ];
 
 /* ------------------------------------------------------------------ links -- */
@@ -106,11 +120,23 @@ export const education: EducationItem[] = [
 /* --------------------------------------------------------------- projects -- */
 export const projects: Project[] = [
   {
+    index: '01',
     name: 'AURORA',
-    tagline: 'React Native Caffeine Tracker',
+    tagline: 'Private caffeine, sleep, and alertness tracking',
     period: 'Aug 2025 — Present',
+    featured: true,
     description:
-      'An iPhone and iPad app connecting caffeine timing, sleep, and alertness. It supports manual logging, optional, read-only Apple Health sleep import, a 60-second vigilance test, and private on-device insights persisted with MMKV.',
+      'An iPhone and iPad app connecting caffeine timing, sleep, and alertness through optional read-only Apple Health access and private on-device persistence.',
+    facts: [
+      'Optional, read-only Apple Health sleep import',
+      'Private on-device insights persisted with MMKV',
+      'Manual logging and a one-minute vigilance test',
+    ],
+    metrics: [
+      { value: '60 sec', label: 'Vigilance test' },
+      { value: 'Read-only', label: 'Apple Health access' },
+      { value: 'iOS + iPad', label: 'Product surface' },
+    ],
     stack: ['React Native', 'TypeScript', 'HealthKit', 'MMKV', 'Zustand'],
     links: [
       { label: 'Case study', href: '/writing/aurora-private-caffeine-tracking/' },
@@ -118,29 +144,45 @@ export const projects: Project[] = [
     ],
   },
   {
+    index: '02',
     name: 'EmbNode',
-    tagline: 'FreeRTOS Telemetry Node (ESP32/STM32)',
+    tagline: 'FreeRTOS telemetry node',
     period: 'Aug 2025 — Sep 2025',
     description:
-      'DMA sampling pipeline with a high-priority sampler, aggregator, MQTT/HTTP comms, OTA, watchdog, and deep-sleep scheduling; host-sim via CMake/CTest. CRC16-CCITT reference pass and telemetry decode; modeled avg current 0.15 mA with 15 s sleep; 100% tests passing.',
-    stack: ['C++23', 'FreeRTOS', 'ESP32/STM32', 'MQTT', 'CMake/CTest'],
-    links: [{ label: 'Repo', href: 'https://github.com/nmapaye/embnode' }],
+      'An ESP32 and STM32 telemetry pipeline built around deterministic sampling, resilient communications, and deep-sleep scheduling.',
+    facts: [
+      'DMA sampling with prioritized FreeRTOS tasks',
+      'CRC16-CCITT reference pass and telemetry decode',
+      '0.15 mA modeled average current with 15-second sleep',
+    ],
+    stack: ['C++23', 'FreeRTOS', 'ESP32 / STM32', 'MQTT', 'CMake / CTest'],
+    links: [{ label: 'Repository', href: 'https://github.com/nmapaye/embnode' }],
   },
   {
+    index: '03',
     name: 'GitOps',
-    tagline: 'SLO-driven Canary Operator',
+    tagline: 'SLO-driven canary operator',
     description:
-      'Go-based Kubernetes Operator for SLO-driven canaries; integrated Prometheus + Gatekeeper policies; automated rollback in <30s on p95 regression.',
+      'A Go Kubernetes operator that turns service-level signals into automated canary decisions.',
+    facts: [
+      'Prometheus and Gatekeeper policy checks',
+      'Automated rollback in under 30 seconds on p95 regression',
+    ],
     stack: ['Go', 'Kubernetes', 'Prometheus', 'ArgoCD'],
-    links: [{ label: 'Repo', href: 'https://github.com/nmapaye/gitops' }],
+    links: [{ label: 'Repository', href: 'https://github.com/nmapaye/gitops' }],
   },
   {
+    index: '04',
     name: 'SysLib',
     tagline: 'Header-only C++23 concurrency library',
     description:
-      'SPSC at 26,987,335 ops/s on Apple M-class (~37 ns/op p99). Lock-free MPMC (Michael–Scott + epoch reclamation); verified with ThreadSanitizer and linearizability checks.',
+      'Lock-free queues and memory-reclamation experiments measured and verified as a focused systems library.',
+    facts: [
+      '26.9M SPSC operations per second on Apple M-class',
+      'ThreadSanitizer and linearizability checks',
+    ],
     stack: ['C++23', 'Atomics', 'Lock-free', 'TSan'],
-    links: [{ label: 'Repo', href: 'https://github.com/nmapaye/syslib' }],
+    links: [{ label: 'Repository', href: 'https://github.com/nmapaye/syslib' }],
   },
 ];
 
@@ -192,44 +234,5 @@ export const experience: ExperienceItem[] = [
       'Produced PoC-backed remediation reports with status tracking through implementation; improved closure rates and reduced re-open defects.',
     ],
     tools: ['Nessus', 'Burp Suite', 'OWASP Testing Guide', 'TCP/IP', 'Jira'],
-  },
-];
-
-/* ------------------------------------------------------------------ skills -- */
-export const skills: SkillGroup[] = [
-  {
-    category: 'Languages',
-    items: ['C++23', 'Go', 'TypeScript / JavaScript', 'Python', 'Java', 'Lua'],
-  },
-  {
-    category: 'Systems & Embedded',
-    items: ['FreeRTOS', 'ESP32 / STM32', 'Atomics', 'Lock-free structures', 'Linux'],
-  },
-  {
-    category: 'Infra & DevOps',
-    items: [
-      'Docker',
-      'Kubernetes',
-      'ArgoCD',
-      'Helm',
-      'Kustomize',
-      'Prometheus',
-      'GitHub Actions',
-      'REST',
-    ],
-  },
-  {
-    category: 'Security & Testing',
-    items: [
-      'Burp Suite',
-      'Nessus',
-      'OWASP TG',
-      'ASVS mapping',
-      'CVSS triage',
-      'CMake/CTest',
-      'k6',
-      'envtest',
-      'kind',
-    ],
   },
 ];

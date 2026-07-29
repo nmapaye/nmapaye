@@ -1,8 +1,3 @@
-/* ============================================================================
- *  GLOBAL STYLES — reset + base layout. Uses tokens from tokens.css.
- *  Prefer editing tokens.css for theming; edit here only for structural rules.
- * ========================================================================== */
-
 *,
 *::before,
 *::after {
@@ -15,23 +10,40 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: calc(var(--nav-height) + var(--sp-4));
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
+  scroll-padding-top: calc(var(--nav-height) + 1rem);
 }
 
 body {
+  overflow-x: clip;
   font-family: var(--font-sans);
   font-size: var(--fs-base);
   line-height: var(--lh-base);
-  color: var(--text);
-  background: var(--bg);
+  color: var(--ink);
+  background: var(--paper);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+:focus-visible {
+  outline: 4px solid var(--red);
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 1000;
+  padding: 0.75rem 1rem;
+  border: var(--rule);
+  background: var(--green);
+  color: var(--ink);
+  font-weight: 900;
+  transform: translateY(-150%);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
 }
 
 h1,
@@ -43,7 +55,7 @@ h3 {
 }
 
 a {
-  color: var(--accent);
+  color: var(--ink);
   text-decoration: none;
 }
 
@@ -60,33 +72,52 @@ ul {
   padding-left: 1.1rem;
 }
 
-/* --- layout helpers ------------------------------------------------------ */
 .container {
-  width: 100%;
-  max-width: var(--max-width);
+  width: min(100% - 2rem, var(--max-width));
   margin-inline: auto;
-  padding-inline: var(--sp-6);
 }
 
-.section {
-  padding-block: var(--sp-24);
-  border-top: 1px solid var(--border);
+.chapter {
+  border-top: var(--rule);
 }
 
-.section__title {
-  font-size: var(--fs-xl);
-  margin-bottom: var(--sp-8);
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
+.chapter__label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.section__title::before {
-  content: '';
-  width: 1.5rem;
-  height: 3px;
-  background: var(--accent);
-  border-radius: var(--radius-full);
+.display {
+  font-family: var(--font-display);
+  font-weight: 900;
+  letter-spacing: -0.055em;
+  line-height: 0.82;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+
+.btn {
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border: var(--rule);
+  border-radius: 0;
+  background: var(--white);
+  color: var(--ink);
+  font-weight: 900;
+  text-transform: uppercase;
+  transition: transform 120ms ease, background-color 120ms ease;
+}
+
+.btn:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 3px 3px 0 var(--ink);
+  text-decoration: none;
+}
+
+.btn--primary {
+  background: var(--green);
 }
 
 .eyebrow {
@@ -94,14 +125,13 @@ ul {
   font-size: var(--fs-xs);
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: var(--accent);
+  color: var(--ink);
 }
 
 .muted {
   color: var(--muted);
 }
 
-/* --- chips --------------------------------------------------------------- */
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -116,43 +146,27 @@ ul {
   background: var(--chip-bg);
   color: var(--chip-text);
   padding: var(--sp-1) var(--sp-3);
-  border-radius: var(--radius-full);
+  border: 1px solid var(--ink);
+  border-radius: 0;
   white-space: nowrap;
 }
 
-/* --- buttons ------------------------------------------------------------- */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-2);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  padding: var(--sp-3) var(--sp-6);
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  cursor: pointer;
-  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
-}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 
-.btn:hover {
-  text-decoration: none;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
-}
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 
-.btn--primary {
-  background: var(--accent);
-  color: var(--accent-contrast);
-  border-color: var(--accent);
-}
-
-/* --- cards --------------------------------------------------------------- */
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--sp-6);
-  box-shadow: var(--shadow-sm);
+  .btn:hover {
+    transform: none;
+    box-shadow: none;
+  }
 }

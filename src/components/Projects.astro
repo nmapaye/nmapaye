@@ -1,21 +1,113 @@
 ---
 import { projects } from '../data/site';
 import ProjectCard from './ProjectCard.astro';
+const featured = projects.find((project) => project.featured);
+const secondary = projects.filter((project) => !project.featured);
 ---
 
-<section id="projects" class="section">
-  <div class="container">
-    <h2 class="section__title">Projects</h2>
-    <div class="projects__grid">
-      {projects.map((project) => <ProjectCard project={project} />)}
-    </div>
+<section id="work" class="chapter work" aria-labelledby="work-title">
+  <header class="work__header">
+    <p class="chapter__label">01 / Work</p>
+    <h2 id="work-title" class="display">Selected work</h2>
+  </header>
+
+  {featured && (
+    <article class="work-feature">
+      <div class="work-feature__copy">
+        <p class="chapter__label">Featured / {featured.index}</p>
+        <h3 class="display">{featured.name}</h3>
+        <p class="work-feature__tagline">{featured.tagline}</p>
+        <p>{featured.description}</p>
+        <ul>
+          {featured.facts.map((fact) => <li>{fact}</li>)}
+        </ul>
+        {featured.links && (
+          <div class="work-feature__links">
+            {featured.links.map((link) => <a class="btn" href={link.href}>{link.label} ↗</a>)}
+          </div>
+        )}
+      </div>
+      <dl class="work-feature__metrics">
+        {featured.metrics?.map((metric) => (
+          <div>
+            <dt>{metric.value}</dt>
+            <dd>{metric.label}</dd>
+          </div>
+        ))}
+      </dl>
+    </article>
+  )}
+
+  <div class="work__grid">
+    {secondary.map((project) => <ProjectCard project={project} />)}
   </div>
 </section>
 
 <style>
-  .projects__grid {
+  .work__header {
+    padding: clamp(3rem, 7vw, 6rem) max(1rem, calc((100vw - var(--max-width)) / 2));
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .work__header h2 {
+    margin-top: 1rem;
+    font-size: clamp(4rem, 11vw, 9rem);
+  }
+
+  .work-feature {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--sp-6);
+    grid-template-columns: minmax(0, 1.45fr) minmax(18rem, 0.55fr);
+    border-bottom: var(--rule);
+    background: var(--yellow);
+  }
+
+  .work-feature__copy {
+    padding: clamp(1.5rem, 5vw, 4rem);
+    border-right: var(--rule);
+  }
+
+  .work-feature__copy h3 {
+    margin-block: 1rem;
+    font-size: clamp(4rem, 10vw, 8rem);
+  }
+
+  .work-feature__metrics {
+    display: grid;
+    margin: 0;
+  }
+
+  .work-feature__metrics div {
+    padding: 1.5rem;
+    display: grid;
+    align-content: end;
+    border-bottom: var(--rule);
+  }
+
+  .work-feature__metrics dt {
+    font: 900 clamp(2rem, 5vw, 4rem)/0.9 var(--font-display);
+  }
+
+  .work-feature__metrics dd {
+    margin-top: 0.4rem;
+    font: 900 0.72rem/1.2 var(--font-mono);
+    text-transform: uppercase;
+  }
+
+  .work__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  @media (max-width: 959px) {
+    .work-feature,
+    .work__grid {
+      grid-template-columns: 1fr;
+    }
+
+    .work-feature__copy {
+      border-right: 0;
+      border-bottom: var(--rule);
+    }
   }
 </style>

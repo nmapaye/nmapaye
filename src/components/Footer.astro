@@ -4,33 +4,48 @@ const year = new Date().getFullYear();
 ---
 
 <footer class="footer">
-  <div class="container footer__inner">
-    <span class="muted">© {year} {profile.name}</span>
-    <div class="footer__links">
-      <a href={`mailto:${links.email}`}>Email</a>
-      <a href={links.linkedin} target="_blank" rel="noopener">LinkedIn</a>
-      <a href={links.github} target="_blank" rel="noopener">GitHub</a>
-    </div>
-  </div>
+  <span>NM / Issue 01</span>
+  <span>© {year} {profile.name}</span>
+  <nav aria-label="Footer">
+    <a href={`mailto:${links.email}`}>Email</a>
+    <a href={links.linkedin} rel="noopener">LinkedIn</a>
+    <a href={links.github} rel="noopener">GitHub</a>
+  </nav>
 </footer>
 
 <style>
   .footer {
-    border-top: 1px solid var(--border);
-    padding-block: var(--sp-8);
-  }
-
-  .footer__inner {
-    display: flex;
-    flex-wrap: wrap;
+    padding: 1.25rem;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    justify-content: space-between;
     gap: var(--sp-4);
-    font-size: var(--fs-sm);
+    border-top: var(--rule);
+    background: var(--ink);
+    color: var(--paper);
+    font: 800 0.7rem/1.4 var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
 
-  .footer__links {
+  .footer nav {
     display: flex;
-    gap: var(--sp-6);
+    justify-content: flex-end;
+    gap: 1rem;
+  }
+
+  .footer a {
+    color: var(--paper);
+  }
+
+  @media (max-width: 639px) {
+    .footer {
+      grid-template-columns: 1fr;
+    }
+
+    .footer nav {
+      justify-content: flex-start;
+      flex-wrap: wrap;
+    }
   }
 </style>

@@ -43,15 +43,15 @@ const formatDate = (date: Date) =>
   structuredData={structuredData}
 >
   <Nav />
-  <main>
+  <main id="main-content" tabindex="-1">
     <article class="article container">
-      <a class="article__back" href="/writing/">← All writing</a>
+      <a class="article__back" href="/writing/">← All notes</a>
       <header class="article__header">
         <p class="eyebrow">{formatDate(post.data.publishedDate)}</p>
         <h1>{post.data.title}</h1>
         <p class="article__dek">{post.data.description}</p>
         <p class="article__byline">
-          By <a href="/#about" rel="author">{profile.name}</a>
+          By <a href="/" rel="author">{profile.name}</a>
         </p>
         <ul class="chips" aria-label="Topics">
           {post.data.tags.map((tag) => <li class="chip">{tag}</li>)}

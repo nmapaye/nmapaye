@@ -1,0 +1,116 @@
+---
+import { Image } from 'astro:assets';
+import { getCollection } from 'astro:content';
+import notesPhoto from '../assets/portfolio/notes-aquarium.png';
+
+const posts = (await getCollection('writing', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.publishedDate.valueOf() - a.data.publishedDate.valueOf());
+const featured = posts[0];
+const formatDate = (date: Date) =>
+  new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'long',
+    timeZone: 'UTC',
+  }).format(date);
+---
+
+<section id="notes" class="chapter notes" aria-labelledby="notes-title">
+  <div class="notes__photo">
+    <Image
+      src={notesPhoto}
+      alt="Nathaniel Mapaye posing in front of an aquarium"
+      widths={[640, 960, 1280, 1600]}
+      sizes="(max-width: 959px) 100vw, 50vw"
+      format="webp"
+      quality={80}
+      loading="lazy"
+    />
+  </div>
+  <div class="notes__content">
+    <p class="chapter__label">03 / Notes</p>
+    <h2 id="notes-title" class="display">Notes from<br />the underground</h2>
+    {featured && (
+      <article>
+        <p class="chapter__label">{formatDate(featured.data.publishedDate)}</p>
+        <h3><a href={`/writing/${featured.slug}/`}>{featured.data.title}</a></h3>
+        <p>{featured.data.description}</p>
+        <a class="btn" href={`/writing/${featured.slug}/`}>Read the note</a>
+      </article>
+    )}
+    <a class="btn btn--primary" href="/writing/">All notes</a>
+  </div>
+</section>
+
+<style>
+  .notes {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .notes__photo,
+  .notes__content {
+    min-width: 0;
+  }
+
+  .notes__photo {
+    min-height: 680px;
+    border-right: var(--rule);
+  }
+
+  .notes__photo :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .notes__content {
+    padding: clamp(2rem, 6vw, 5rem);
+  }
+
+  .notes__content h2 {
+    margin-block: 1rem 3rem;
+    color: var(--green);
+    font-size: clamp(3rem, 7vw, 6.5rem);
+  }
+
+  .notes__content article {
+    padding: 1.5rem;
+    border: 3px solid var(--paper);
+  }
+
+  .notes__content article h3 {
+    margin-block: 0.75rem;
+    font-size: clamp(1.7rem, 4vw, 3rem);
+  }
+
+  .notes__content article h3 a {
+    color: inherit;
+  }
+
+  .notes__content article > .btn {
+    color: var(--ink);
+  }
+
+  .notes__content > .btn {
+    margin-top: 1rem;
+  }
+
+  @media (max-width: 959px) {
+    .notes {
+      grid-template-columns: 1fr;
+    }
+
+    .notes__photo {
+      min-height: 420px;
+      border-right: 0;
+      border-bottom: var(--rule);
+    }
+  }
+
+  @media (max-width: 639px) {
+    .notes__content h2 {
+      font-size: clamp(2rem, 10.5vw, 4rem);
+    }
+  }
+</style>

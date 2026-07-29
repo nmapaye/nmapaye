@@ -36,8 +36,7 @@ nmapaye@ucsc.edu • [LinkedIn](https://www.linkedin.com/in/nmapaye) • [Websit
 npm ci
 python3 -m pip install -r requirements-test.txt
 python3 scripts/build-resume.py public/resume.pdf
-npm run build
-npm run test:seo
+npm test
 python3 scripts/test-resume.py
 ```
 

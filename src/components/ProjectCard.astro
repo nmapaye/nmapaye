@@ -6,76 +6,102 @@ interface Props {
 const { project } = Astro.props;
 ---
 
-<article class="card project">
-  <header class="project__head">
-    <h3 class="project__name">{project.name}</h3>
-    {project.period && <span class="project__period muted">{project.period}</span>}
+<article class="project-card">
+  <header>
+    <span>{project.index}</span>
+    {project.period && <time>{project.period}</time>}
   </header>
-  <p class="project__tagline">{project.tagline}</p>
-  <p class="project__desc muted">{project.description}</p>
-
-  <ul class="chips project__stack">
-    {project.stack.map((tech) => <li class="chip">{tech}</li>)}
+  <h3>{project.name}</h3>
+  <p class="project-card__tagline">{project.tagline}</p>
+  <p>{project.description}</p>
+  <ul class="project-card__facts">
+    {project.facts.map((fact) => <li>{fact}</li>)}
   </ul>
-
-  {
-    project.links && project.links.length > 0 && (
-      <div class="project__links">
-        {project.links.map((link) => (
-          <a href={link.href} target="_blank" rel="noopener">
-            {link.label} ↗
-          </a>
-        ))}
-      </div>
-    )
-  }
+  <ul class="project-card__stack" aria-label={`${project.name} technologies`}>
+    {project.stack.map((tech) => <li>{tech}</li>)}
+  </ul>
+  {project.links && (
+    <div class="project-card__links">
+      {project.links.map((link) => (
+        <a href={link.href} rel={link.href.startsWith('http') ? 'noopener' : undefined}>
+          {link.label} ↗
+        </a>
+      ))}
+    </div>
+  )}
 </article>
 
 <style>
-  .project {
+  .project-card {
+    min-height: 100%;
+    padding: 1.5rem;
     display: flex;
     flex-direction: column;
-    gap: var(--sp-3);
-    height: 100%;
+    gap: 1rem;
+    border-right: var(--rule);
+    border-bottom: var(--rule);
+    background: var(--white);
   }
 
-  .project__head {
+  .project-card header {
     display: flex;
-    align-items: baseline;
     justify-content: space-between;
-    gap: var(--sp-3);
+    gap: 1rem;
+    font: 900 0.7rem/1.2 var(--font-mono);
+    text-transform: uppercase;
   }
 
-  .project__name {
-    font-size: var(--fs-lg);
+  .project-card h3 {
+    font: 900 clamp(2.7rem, 5vw, 4.5rem)/0.85 var(--font-display);
+    letter-spacing: -0.04em;
+    text-transform: uppercase;
   }
 
-  .project__period {
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    white-space: nowrap;
+  .project-card__tagline {
+    font-weight: 900;
+    text-transform: uppercase;
   }
 
-  .project__tagline {
-    font-weight: 600;
-    color: var(--accent);
-    font-size: var(--fs-sm);
+  .project-card__facts {
+    display: grid;
+    gap: 0.5rem;
+    padding-left: 1.1rem;
   }
 
-  .project__desc {
-    font-size: var(--fs-sm);
-  }
-
-  .project__stack {
+  .project-card__stack {
     margin-top: auto;
-    padding-top: var(--sp-2);
-  }
-
-  .project__links {
+    padding: 0;
     display: flex;
     flex-wrap: wrap;
-    gap: var(--sp-4);
-    font-size: var(--fs-sm);
-    font-weight: 600;
+    gap: 0.4rem;
+    list-style: none;
+  }
+
+  .project-card__stack li {
+    padding: 0.35rem 0.5rem;
+    border: 2px solid var(--ink);
+    font: 800 0.68rem/1 var(--font-mono);
+    text-transform: uppercase;
+  }
+
+  .project-card__links {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .project-card__links a {
+    min-height: 44px;
+    padding: 0.75rem;
+    display: grid;
+    place-items: center;
+    border: 2px solid var(--ink);
+    color: var(--ink);
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .project-card__links a:hover {
+    background: var(--red);
+    text-decoration: none;
   }
 </style>

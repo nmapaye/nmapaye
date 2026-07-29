@@ -1,98 +1,207 @@
 ---
-import { experience } from '../data/site';
+import { Image } from 'astro:assets';
+import actionPhoto from '../assets/portfolio/experience-table-tennis.png';
+import { education, experience, featuredSkills } from '../data/site';
 ---
 
-<section id="experience" class="section">
-  <div class="container">
-    <h2 class="section__title">Experience</h2>
-    <ol class="timeline">
-      {
-        experience.map((item) => (
-          <li class="timeline__item">
-            <div class="timeline__head">
-              <h3 class="timeline__role">
-                {item.role} <span class="timeline__org">· {item.org}</span>
-              </h3>
-              <span class="timeline__period muted">{item.period}</span>
-            </div>
-            {item.location && <p class="timeline__loc muted">{item.location}</p>}
-            <ul class="timeline__bullets">
-              {item.bullets.map((b) => (
-                <li>{b}</li>
-              ))}
+<section id="experience" class="chapter experience" aria-labelledby="experience-title">
+  <header class="experience__header">
+    <p class="chapter__label">02 / Experience</p>
+    <h2 id="experience-title" class="display">Systems.<br />Security.<br />Product.</h2>
+  </header>
+
+  <div class="experience__body">
+    <ol class="experience__timeline">
+      {experience.map((item, index) => (
+        <li>
+          <span class="experience__index">{String(index + 1).padStart(2, '0')}</span>
+          <article>
+            <header>
+              <div>
+                <h3>{item.role}</h3>
+                <p>{item.org}</p>
+              </div>
+              <p>{item.period}</p>
+            </header>
+            {item.location && <p class="experience__location">{item.location}</p>}
+            <ul>
+              {item.bullets.slice(0, 2).map((bullet) => <li>{bullet}</li>)}
             </ul>
             {item.tools && (
-              <ul class="chips">
-                {item.tools.map((tool) => (
-                  <li class="chip">{tool}</li>
-                ))}
-              </ul>
+              <p class="experience__tools">{item.tools.slice(0, 5).join(' / ')}</p>
             )}
-          </li>
-        ))
-      }
+          </article>
+        </li>
+      ))}
     </ol>
+
+    <aside class="experience__credentials">
+      <Image
+        src={actionPhoto}
+        alt="Nathaniel Mapaye playing table tennis outdoors"
+        widths={[480, 720, 960]}
+        sizes="(max-width: 959px) 100vw, 34vw"
+        format="webp"
+        quality={80}
+        loading="lazy"
+      />
+      <div>
+        <p class="chapter__label">Education</p>
+        <h3>{education[0].school}</h3>
+        <p>{education[0].degree}</p>
+        <p>{education[0].period}</p>
+      </div>
+      <div>
+        <p class="chapter__label">Selected tools</p>
+        <ul>
+          {featuredSkills.map((item) => <li>{item}</li>)}
+        </ul>
+      </div>
+    </aside>
   </div>
 </section>
 
 <style>
-  .timeline {
-    list-style: none;
-    padding: 0;
+  .experience__header {
+    padding: clamp(3rem, 8vw, 7rem) max(1rem, calc((100vw - var(--max-width)) / 2));
+    background: var(--red);
+  }
+
+  .experience__header h2 {
+    max-width: 10ch;
+    margin-top: 1rem;
+    font-size: clamp(4rem, 12vw, 10rem);
+  }
+
+  .experience__body {
     display: grid;
-    gap: var(--sp-12);
+    grid-template-columns: minmax(0, 1.55fr) minmax(18rem, 0.65fr);
   }
 
-  .timeline__item {
-    position: relative;
-    padding-left: var(--sp-6);
-    border-left: 2px solid var(--border);
+  .experience__timeline {
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
 
-  .timeline__item::before {
-    content: '';
-    position: absolute;
-    left: -7px;
-    top: 6px;
-    width: 12px;
-    height: 12px;
-    border-radius: var(--radius-full);
-    background: var(--accent);
-    border: 2px solid var(--bg);
+  .experience__timeline > li {
+    display: grid;
+    grid-template-columns: 4rem minmax(0, 1fr);
+    border-bottom: var(--rule);
   }
 
-  .timeline__head {
+  .experience__index {
+    padding: 1rem;
+    border-right: var(--rule);
+    font: 900 0.75rem/1 var(--font-mono);
+  }
+
+  .experience__timeline article {
+    min-width: 0;
+    padding: clamp(1.25rem, 4vw, 2.5rem);
+  }
+
+  .experience__timeline article > header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .experience__timeline h3 {
+    font: 900 clamp(1.7rem, 4vw, 3.2rem)/0.95 var(--font-display);
+    text-transform: uppercase;
+  }
+
+  .experience__timeline article > header > p {
+    flex: 0 0 auto;
+    font: 900 0.72rem/1.3 var(--font-mono);
+    text-align: right;
+  }
+
+  .experience__location {
+    margin-top: 0.65rem;
+    font: 700 0.75rem/1.3 var(--font-mono);
+  }
+
+  .experience__timeline ul {
+    margin-top: 1rem;
+    font-size: 0.95rem;
+  }
+
+  .experience__tools {
+    margin-top: 1rem;
+    font: 800 0.72rem/1.5 var(--font-mono);
+    text-transform: uppercase;
+  }
+
+  .experience__credentials {
+    min-width: 0;
+    border-left: var(--rule);
+    background: var(--green);
+  }
+
+  .experience__credentials > * {
+    border-bottom: var(--rule);
+  }
+
+  .experience__credentials img {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+  }
+
+  .experience__credentials > div {
+    padding: 1.25rem;
+  }
+
+  .experience__credentials h3 {
+    margin-top: 0.8rem;
+    font: 900 clamp(1.8rem, 3vw, 3rem)/0.95 var(--font-display);
+    text-transform: uppercase;
+  }
+
+  .experience__credentials ul {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--sp-2) var(--sp-4);
+    gap: 0.5rem 0.75rem;
+    margin-top: 1rem;
+    padding-left: 1.1rem;
+    font: 800 0.72rem/1.3 var(--font-mono);
+    text-transform: uppercase;
   }
 
-  .timeline__role {
-    font-size: var(--fs-lg);
+  @media (max-width: 959px) {
+    .experience__body {
+      grid-template-columns: 1fr;
+    }
+
+    .experience__credentials {
+      border-left: 0;
+    }
   }
 
-  .timeline__org {
-    color: var(--muted);
-    font-weight: 500;
+  @media (max-width: 639px) {
+    .experience__header h2 {
+      font-size: clamp(3rem, 15vw, 6rem);
+    }
   }
 
-  .timeline__period {
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    white-space: nowrap;
-  }
+  @media (max-width: 420px) {
+    .experience__timeline > li {
+      grid-template-columns: 3rem minmax(0, 1fr);
+    }
 
-  .timeline__loc {
-    font-size: var(--fs-sm);
-    margin-top: var(--sp-1);
-  }
+    .experience__index {
+      padding: 0.8rem 0.5rem;
+    }
 
-  .timeline__bullets {
-    margin-block: var(--sp-3);
-    display: grid;
-    gap: var(--sp-2);
-    font-size: var(--fs-sm);
+    .experience__timeline article > header {
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .experience__timeline article > header > p {
+      text-align: left;
+    }
   }
 </style>

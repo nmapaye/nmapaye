@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "test:seo": "astro build && node --test scripts/test-seo.mjs",
+    "test": "npm run build && node --test scripts/test-seo.mjs scripts/test-homepage.mjs scripts/test-hosting.mjs",
+    "test:homepage": "npm run build && node --test scripts/test-homepage.mjs",
+    "test:seo": "npm run build && node --test scripts/test-seo.mjs",
     "preview": "astro preview",
     "astro": "astro"
   },
