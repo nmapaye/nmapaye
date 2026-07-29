@@ -21,7 +21,12 @@ export async function readBuiltCss() {
     .filter((entry) => entry.isFile() && entry.name.endsWith('.css'))
     .map((entry) => readFile(new URL(entry.name, assetRoot), 'utf8'));
 
-  return (await Promise.all(stylesheets)).join('\n');
+  return (await Promise.all(stylesheets))
+    .join('\n')
+    .replace(/@media\s*\(\s*max-width\s*:\s*(\d+)px\s*\)/g, '@media(max-width:$1px)')
+    .replace(/:\s+/g, ':')
+    .replace(/\s*\/\s*/g, '/')
+    .replace(/\]\s*>\s*/g, '] > ');
 }
 
 export function visibleText(html) {
@@ -113,7 +118,6 @@ test('final review contracts keep the release gate, resilient masthead, and lega
   assert.match(tokens, /--font-display:[^;]*'Arial Narrow'/);
   assert.match(global, /\.display\s*\{[\s\S]*?overflow-wrap:\s*anywhere;/);
   assert.match(hero, /@media \(max-width: 639px\)[\s\S]*?\.cover h1\s*\{[\s\S]*?clamp\(3\.25rem,\s*18vw,/);
-  assert.match(experience, /@media \(max-width: 639px\)[\s\S]*?\.experience__header h2\s*\{[\s\S]*?clamp\(3rem,\s*15vw,/);
   assert.match(notes, /@media \(max-width: 639px\)[\s\S]*?\.notes__content h2\s*\{[\s\S]*?clamp\(2rem,\s*10\.5vw,/);
   assert.match(writingIndex, /@media \(max-width: 639px\)[\s\S]*?\.writing-index h1\s*\{[\s\S]*?clamp\(2rem,\s*10\.5vw,/);
 
@@ -409,6 +413,57 @@ test('experience chapter emphasizes systems, security, and product', async () =>
 
   assert.deepEqual(roleBulletCounts, [2, 2, 2, 2]);
   assert.equal(roleBulletCounts.reduce((total, count) => total + count, 0), 8);
+});
+
+test('built experience chapter uses the approved compact mobile layout', async () => {
+  const [html, css] = await Promise.all([readHomepage(), readBuiltCss()]);
+  const experienceChapter = html.match(
+    /<section id="experience"[^>]*>[\s\S]*?<\/section>/,
+  )?.[0] ?? '';
+
+  assert.match(css, /scroll-padding-top:calc\(var\(--nav-height\) \+ 1rem\)/);
+  assert.match(
+    css,
+    /@media\(max-width:639px\)\{[\s\S]*?\.experience__header\[[^\]]+\]\{padding:2\.75rem 1rem\}/,
+  );
+  assert.match(
+    css,
+    /@media\(max-width:639px\)\{[\s\S]*?\.experience__header\[[^\]]+\] h2\[[^\]]+\]\{font-size:clamp\(2\.85rem,14vw,4\.75rem\)\}/,
+  );
+  assert.match(
+    css,
+    /@media\(max-width:639px\)\{[\s\S]*?\.experience__timeline\[[^\]]+\] > li\[[^\]]+\]\{display:block;padding-top:1rem\}/,
+  );
+  assert.match(
+    css,
+    /@media\(max-width:639px\)\{[\s\S]*?\.experience__index\[[^\]]+\]\{[^}]*display:inline-block[^}]*border:var\(--rule\)[^}]*background:var\(--yellow\)/,
+  );
+  assert.match(
+    css,
+    /@media\(max-width:639px\)\{[\s\S]*?\.experience__timeline\[[^\]]+\] article\[[^\]]+\] > header\[[^\]]+\]\{flex-direction:column;gap:\.4rem\}/,
+  );
+  assert.match(
+    css,
+    /@media\(max-width:639px\)\{[\s\S]*?\.experience__timeline\[[^\]]+\] ul\[[^\]]+\]\{[^}]*font-size:1rem[^}]*line-height:1\.55[^}]*font-weight:500/,
+  );
+  assert.match(
+    css,
+    /@media\(max-width:639px\)\{[\s\S]*?\.experience__credentials\[[^\]]+\] ul\[[^\]]+\]\{[^}]*padding:0[^}]*list-style:none/,
+  );
+  assert.match(
+    css,
+    /@media\(max-width:639px\)\{[\s\S]*?\.experience__credentials\[[^\]]+\] li\[[^\]]+\]\{[^}]*border:2px solid var\(--ink\)/,
+  );
+  assert.match(
+    css,
+    /@media\(max-width:639px\)\{[\s\S]*?\.experience__credentials\[[^\]]+\] img\[[^\]]+\]\{aspect-ratio:3\/2\}/,
+  );
+  assert.doesNotMatch(
+    css,
+    /@media\(max-width:420px\)\{[\s\S]*?grid-template-columns:3rem/,
+  );
+  assert.equal((experienceChapter.match(/class="experience__index"/g) ?? []).length, 4);
+  assert.equal((experienceChapter.match(/class="experience__credentials"/g) ?? []).length, 1);
 });
 
 test('homepage renders the final issue architecture without legacy chapters', async () => {
