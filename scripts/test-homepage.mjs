@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { access, readFile } from 'node:fs/promises';
+import { access, readdir, readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const repoRoot = new URL('../', import.meta.url);
@@ -12,6 +12,16 @@ export async function readHomepage() {
 
 export async function readSource(path) {
   return readFile(new URL(path, repoRoot), 'utf8');
+}
+
+export async function readBuiltCss() {
+  const assetRoot = new URL('_astro/', outputRoot);
+  const entries = await readdir(assetRoot, { withFileTypes: true });
+  const stylesheets = entries
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.css'))
+    .map((entry) => readFile(new URL(entry.name, assetRoot), 'utf8'));
+
+  return (await Promise.all(stylesheets)).join('\n');
 }
 
 export function visibleText(html) {
@@ -38,6 +48,33 @@ test('approved portfolio photos are stored locally', async () => {
         `missing approved photo asset: ${path}`,
       );
     }),
+  );
+});
+
+test('built pages self-host Space Grotesk and preserve the editorial type roles', async () => {
+  const [html, css] = await Promise.all([readHomepage(), readBuiltCss()]);
+
+  assert.doesNotMatch(html, /fonts\.(?:googleapis|gstatic)\.com/);
+  assert.match(
+    css,
+    /@font-face\{[^}]*font-family:(?:"Space Grotesk Variable"|Space Grotesk Variable)[^}]*font-display:swap[^}]*font-weight:300 700[^}]*\}/,
+  );
+  assert.match(
+    css,
+    /--font-sans:\s*"Space Grotesk Variable",\s*"Space Grotesk",\s*Arial,\s*Helvetica,\s*sans-serif/,
+  );
+  assert.match(
+    css,
+    /--font-display:\s*Impact,\s*Haettenschweiler,\s*"Arial Narrow",\s*"Arial Narrow Bold",\s*sans-serif/,
+  );
+  assert.match(
+    css,
+    /--font-mono:\s*ui-monospace,\s*SFMono-Regular,\s*Menlo,\s*Consolas,\s*monospace/,
+  );
+  assert.match(css, /--lh-base:\s*1\.55/);
+  assert.match(
+    css,
+    /body\{[^}]*font-family:var\(--font-sans\)[^}]*line-height:var\(--lh-base\)[^}]*letter-spacing:-\.012em/,
   );
 });
 

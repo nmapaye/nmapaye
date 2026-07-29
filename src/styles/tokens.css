@@ -14,7 +14,7 @@
   --border: var(--ink);
   --accent: var(--green);
   --font-display: Impact, Haettenschweiler, 'Arial Narrow', 'Arial Narrow Bold', sans-serif;
-  --font-sans: Arial, Helvetica, sans-serif;
+  --font-sans: 'Space Grotesk Variable', 'Space Grotesk', Arial, Helvetica, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --rule: 3px solid var(--ink);
   --radius: 0;
@@ -30,7 +30,7 @@
   --fs-2xl: 2.5rem;
   --fs-3xl: clamp(2.5rem, 6vw, 4rem);
   --lh-tight: 1.2;
-  --lh-base: 1.65;
+  --lh-base: 1.55;
 
   --sp-1: 0.25rem;
   --sp-2: 0.5rem;
