@@ -21,12 +21,70 @@ export async function readBuiltCss() {
     .filter((entry) => entry.isFile() && entry.name.endsWith('.css'))
     .map((entry) => readFile(new URL(entry.name, assetRoot), 'utf8'));
 
-  return (await Promise.all(stylesheets))
-    .join('\n')
-    .replace(/@media\s*\(\s*max-width\s*:\s*(\d+)px\s*\)/g, '@media(max-width:$1px)')
-    .replace(/:\s+/g, ':')
-    .replace(/\s*\/\s*/g, '/')
-    .replace(/\]\s*>\s*/g, '] > ');
+  return (await Promise.all(stylesheets)).join('\n');
+}
+
+export function extractMaxWidthMediaBlocks(css, maxWidth) {
+  const blocks = [];
+  const mediaQuery = new RegExp(
+    `^@media\\s*\\(\\s*max-width\\s*:\\s*${maxWidth}px\\s*\\)$`,
+  );
+
+  for (let index = 0; index < css.length; index += 1) {
+    if (css.startsWith('/*', index)) {
+      index = css.indexOf('*/', index + 2);
+      if (index === -1) break;
+      index += 1;
+      continue;
+    }
+
+    if (css[index] === '"' || css[index] === "'") {
+      const quote = css[index];
+      index += 1;
+      while (index < css.length) {
+        if (css[index] === '\\') index += 2;
+        else if (css[index] === quote) break;
+        else index += 1;
+      }
+      continue;
+    }
+
+    if (!css.startsWith('@media', index)) continue;
+
+    const blockOpen = css.indexOf('{', index + 6);
+    if (blockOpen === -1) break;
+    if (!mediaQuery.test(css.slice(index, blockOpen).trim())) continue;
+
+    let depth = 1;
+    let cursor = blockOpen + 1;
+    for (; cursor < css.length && depth > 0; cursor += 1) {
+      if (css.startsWith('/*', cursor)) {
+        cursor = css.indexOf('*/', cursor + 2);
+        if (cursor === -1) break;
+        cursor += 1;
+        continue;
+      }
+
+      if (css[cursor] === '"' || css[cursor] === "'") {
+        const quote = css[cursor];
+        cursor += 1;
+        while (cursor < css.length) {
+          if (css[cursor] === '\\') cursor += 2;
+          else if (css[cursor] === quote) break;
+          else cursor += 1;
+        }
+        continue;
+      }
+
+      if (css[cursor] === '{') depth += 1;
+      if (css[cursor] === '}') depth -= 1;
+    }
+
+    if (depth === 0) blocks.push(css.slice(blockOpen + 1, cursor));
+    index = cursor;
+  }
+
+  return blocks;
 }
 
 export function visibleText(html) {
@@ -37,6 +95,22 @@ export function visibleText(html) {
     .replace(/\s+/g, ' ')
     .trim();
 }
+
+test('media block extraction scopes matching CSS and preserves quoted content', () => {
+  const css = `
+    .out-of-media { content: "decoy"; }
+    @media (max-width: 639px) {
+      .inside { content: "quoted } \\"value\\""; }
+      /* a comment containing } must not close the block */
+    }
+    @media (max-width: 420px) { .other { content: "other"; } }
+  `;
+  const blocks = extractMaxWidthMediaBlocks(css, 639);
+
+  assert.equal(blocks.length, 1);
+  assert.match(blocks[0], /content:\s*"quoted } \\"value\\""/);
+  assert.doesNotMatch(blocks[0], /out-of-media|\.other/);
+});
 
 test('approved portfolio photos are stored locally', async () => {
   const assetPaths = [
@@ -417,50 +491,60 @@ test('experience chapter emphasizes systems, security, and product', async () =>
 
 test('built experience chapter uses the approved compact mobile layout', async () => {
   const [html, css] = await Promise.all([readHomepage(), readBuiltCss()]);
+  const mobileCss = extractMaxWidthMediaBlocks(css, 639).join('\n');
+  const narrowCss = extractMaxWidthMediaBlocks(css, 420).join('\n');
   const experienceChapter = html.match(
     /<section id="experience"[^>]*>[\s\S]*?<\/section>/,
   )?.[0] ?? '';
 
-  assert.match(css, /scroll-padding-top:calc\(var\(--nav-height\) \+ 1rem\)/);
+  assert.match(css, /scroll-padding-top:\s*calc\(var\(--nav-height\) \+ 1rem\)/);
   assert.match(
-    css,
-    /@media\(max-width:639px\)\{[\s\S]*?\.experience__header\[[^\]]+\]\{padding:2\.75rem 1rem\}/,
+    mobileCss,
+    /\.experience__header\[[^\]]+\]\s*\{\s*padding:\s*2\.75rem\s+1rem\s*\}/,
   );
   assert.match(
-    css,
-    /@media\(max-width:639px\)\{[\s\S]*?\.experience__header\[[^\]]+\] h2\[[^\]]+\]\{font-size:clamp\(2\.85rem,14vw,4\.75rem\)\}/,
+    mobileCss,
+    /\.experience__header\[[^\]]+\]\s+h2\[[^\]]+\]\s*\{\s*font-size:\s*clamp\(2\.85rem,\s*14vw,\s*4\.75rem\)\}/,
   );
   assert.match(
-    css,
-    /@media\(max-width:639px\)\{[\s\S]*?\.experience__timeline\[[^\]]+\] > li\[[^\]]+\]\{display:block;padding-top:1rem\}/,
+    mobileCss,
+    /\.experience__timeline\[[^\]]+\]\s*>\s*li\[[^\]]+\]\s*\{\s*display:\s*block;\s*padding-top:\s*1rem\s*\}/,
   );
   assert.match(
-    css,
-    /@media\(max-width:639px\)\{[\s\S]*?\.experience__index\[[^\]]+\]\{[^}]*display:inline-block[^}]*border:var\(--rule\)[^}]*background:var\(--yellow\)/,
+    mobileCss,
+    /\.experience__index\[[^\]]+\]\s*\{[^}]*display:\s*inline-block[^}]*border:\s*var\(--rule\)[^}]*background:\s*var\(--yellow\)/,
   );
   assert.match(
-    css,
-    /@media\(max-width:639px\)\{[\s\S]*?\.experience__timeline\[[^\]]+\] article\[[^\]]+\] > header\[[^\]]+\]\{flex-direction:column;gap:\.4rem\}/,
+    mobileCss,
+    /\.experience__timeline\[[^\]]+\]\s+article\[[^\]]+\]\s*>\s*header\[[^\]]+\]\s*\{\s*flex-direction:\s*column;\s*gap:\s*\.4rem\s*\}/,
   );
   assert.match(
-    css,
-    /@media\(max-width:639px\)\{[\s\S]*?\.experience__timeline\[[^\]]+\] ul\[[^\]]+\]\{[^}]*font-size:1rem[^}]*line-height:1\.55[^}]*font-weight:500/,
+    mobileCss,
+    /\.experience__timeline\[[^\]]+\]\s+ul\[[^\]]+\]\s*\{[^}]*font-size:\s*1rem[^}]*line-height:\s*1\.55[^}]*font-weight:\s*500/,
   );
   assert.match(
-    css,
-    /@media\(max-width:639px\)\{[\s\S]*?\.experience__credentials\[[^\]]+\] ul\[[^\]]+\]\{[^}]*padding:0[^}]*list-style:none/,
+    mobileCss,
+    /\.experience__credentials\[[^\]]+\]\s+ul\[[^\]]+\]\s*\{[^}]*padding:\s*0[^}]*list-style:\s*none/,
   );
   assert.match(
-    css,
-    /@media\(max-width:639px\)\{[\s\S]*?\.experience__credentials\[[^\]]+\] li\[[^\]]+\]\{[^}]*border:2px solid var\(--ink\)/,
+    mobileCss,
+    /\.experience__credentials\[[^\]]+\]\s+li\[[^\]]+\]\s*\{[^}]*border:\s*2px\s+solid\s+var\(--ink\)/,
   );
   assert.match(
-    css,
-    /@media\(max-width:639px\)\{[\s\S]*?\.experience__credentials\[[^\]]+\] img\[[^\]]+\]\{aspect-ratio:3\/2\}/,
+    mobileCss,
+    /\.experience__credentials\[[^\]]+\]\s+img\[[^\]]+\]\s*\{\s*aspect-ratio:\s*3\s*\/\s*2\s*\}/,
+  );
+  assert.match(
+    mobileCss,
+    /\.experience__timeline\[[^\]]+\]\s+article\[[^\]]+\]\s*\{[^}]*width:\s*100%[^}]*padding:\s*1rem\s+1rem\s+1\.75rem/,
+  );
+  assert.match(
+    mobileCss,
+    /\.experience__tools\[[^\]]+\]\s*\{\s*overflow-wrap:\s*anywhere\s*\}/,
   );
   assert.doesNotMatch(
-    css,
-    /@media\(max-width:420px\)\{[\s\S]*?grid-template-columns:3rem/,
+    narrowCss,
+    /grid-template-columns:\s*3rem/,
   );
   assert.equal((experienceChapter.match(/class="experience__index"/g) ?? []).length, 4);
   assert.equal((experienceChapter.match(/class="experience__credentials"/g) ?? []).length, 1);
