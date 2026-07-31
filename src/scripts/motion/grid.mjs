@@ -250,6 +250,7 @@ export function mountGrid(context) {
       element.setAttribute('aria-hidden', 'true');
       element.removeAttribute('style');
       for (const node of tileNodes) {
+        node.setAttribute('aria-hidden', 'true');
         node.removeAttribute('data-motion-tile-seam');
         node.style.removeProperty('--tile-x');
         node.style.removeProperty('--tile-y');
@@ -403,6 +404,7 @@ export function mountGrid(context) {
 
   element.style.touchAction = 'pan-y';
   element.removeAttribute('aria-hidden');
+  for (const node of tileNodes) node.setAttribute('aria-hidden', 'true');
   element.tabIndex = 0;
   element.setAttribute('role', 'region');
   element.setAttribute('aria-label', 'Draggable project-poster grid');

@@ -263,6 +263,27 @@ test('mount enhances after initialization and every cancellation path releases o
   }
 });
 
+test('enhancement exposes only the grid region while recycled tile visuals stay hidden through cleanup', () => {
+  const harness = createGridHarness();
+  assert.equal(harness.element.getAttribute('aria-hidden'), null);
+  assert.equal(harness.element.getAttribute('role'), 'region');
+  assert.equal(harness.element.getAttribute('tabindex'), '0');
+  assert.equal(harness.element.getAttribute('aria-describedby'), 'project-grid-instructions');
+  for (const tile of harness.element.querySelectorAll('[data-motion-grid-tile]')) {
+    assert.equal(tile.getAttribute('aria-hidden'), 'true');
+  }
+
+  harness.controller.destroy();
+
+  assert.equal(harness.element.getAttribute('aria-hidden'), 'true');
+  assert.equal(harness.element.getAttribute('role'), null);
+  assert.equal(harness.element.getAttribute('tabindex'), null);
+  assert.equal(harness.element.getAttribute('aria-describedby'), null);
+  for (const tile of harness.element.querySelectorAll('[data-motion-grid-tile]')) {
+    assert.equal(tile.getAttribute('aria-hidden'), 'true');
+  }
+});
+
 test('document end, window blur, policy and destroy converge on synchronous grid cleanup', () => {
   for (const ending of ['pointerup', 'pointercancel', 'blur', 'policy', 'destroy']) {
     const harness = createGridHarness();

@@ -13,6 +13,7 @@ const tiles = Array.from({ length: 16 }, (_, index) => projects[index % projects
     {tiles.map((project, index) => (
       <div
         data-motion-grid-tile={index}
+        aria-hidden="true"
         style={`left:${(index % 4) * 25}%;top:${Math.floor(index / 4) * 25}%`}
       >
         <div data-motion-grid-bounce>

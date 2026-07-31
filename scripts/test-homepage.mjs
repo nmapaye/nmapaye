@@ -276,7 +276,9 @@ test('built navigation wipe keeps the exact bounded accessibility sequence', asy
 test('infinite grid is a static 16-tile fallback without duplicate links', async () => {
   const html = await readHomepage();
   const grid = html.match(/<div class="infinite-project-grid"[\s\S]*?<\/div>\s*<\/div>/)?.[0] ?? '';
-  assert.equal((html.match(/data-motion-grid-tile=/g) ?? []).length, 16);
+  const tileRoots = [...html.matchAll(/<div\b[^>]*data-motion-grid-tile=[^>]*>/g)];
+  assert.equal(tileRoots.length, 16);
+  for (const tile of tileRoots) assert.match(tile[0], /aria-hidden="true"/);
   assert.match(grid, /aria-hidden="true"/);
   assert.doesNotMatch(grid, /tabindex="0"|<a\b|<article\b/);
   assert.equal((html.match(/class="work-feature"/g) ?? []).length, 1);
