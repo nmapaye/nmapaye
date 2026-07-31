@@ -1,6 +1,7 @@
 ---
 import { projects } from '../data/site';
 import ProjectCard from './ProjectCard.astro';
+import CardStack from './effects/CardStack.astro';
 import InfiniteProjectGrid from './effects/InfiniteProjectGrid.astro';
 const featured = projects.find((project) => project.featured);
 const secondary = projects.filter((project) => !project.featured);
@@ -15,8 +16,9 @@ const secondary = projects.filter((project) => !project.featured);
   <InfiniteProjectGrid />
 
   {featured && (
-    <article class="work-feature">
+    <article class="work-feature" data-motion-card={featured.index}>
       <div class="work-feature__copy">
+        <CardStack project={featured} />
         <p class="chapter__label">Featured / {featured.index}</p>
         <h3 class="display">{featured.name}</h3>
         <p class="work-feature__tagline">{featured.tagline}</p>

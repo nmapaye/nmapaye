@@ -187,3 +187,107 @@
     --tile-bounce: 1;
   }
 }
+
+[data-motion-card] {
+  position: relative;
+  isolation: isolate;
+}
+
+.card-stack {
+  position: relative;
+  min-height: 14rem;
+  perspective: 900px;
+  pointer-events: none;
+}
+
+.card-stack__layer {
+  position: absolute;
+  inset: 0;
+  transform:
+    translate3d(var(--stack-x, 0), var(--stack-y, 0), var(--stack-z, 0))
+    rotate(var(--stack-rotate, 0deg));
+  transform-style: preserve-3d;
+}
+
+.card-stack__layer,
+.card-stack__metadata {
+  transition: transform 220ms cubic-bezier(.2, .8, .2, 1), opacity 160ms linear;
+}
+
+.card-stack[data-motion-static] .card-stack__layer,
+.card-stack[data-motion-static] .card-stack__metadata {
+  transition: none;
+}
+
+.card-stack[data-expanded] [data-motion-card-layer="0"] {
+  --stack-x: -12%;
+  --stack-y: 5%;
+  --stack-z: -20px;
+  --stack-rotate: -5deg;
+}
+
+.card-stack[data-expanded] [data-motion-card-layer="1"] {
+  --stack-x: 0%;
+  --stack-y: -3%;
+  --stack-z: 0px;
+}
+
+.card-stack[data-expanded] [data-motion-card-layer="2"] {
+  --stack-x: 12%;
+  --stack-y: 5%;
+  --stack-z: 20px;
+  --stack-rotate: 5deg;
+}
+
+.card-stack__metadata {
+  position: absolute;
+  inset: auto 0 0;
+  opacity: 0;
+}
+
+.card-stack[data-expanded] .card-stack__metadata {
+  opacity: 1;
+}
+
+@supports not (transform-style: preserve-3d) {
+  .card-stack { perspective: none; }
+
+  .card-stack__layer {
+    transform: translate(var(--stack-flat-x, 0), var(--stack-flat-y, 0));
+  }
+
+  .card-stack[data-expanded] [data-motion-card-layer="0"] {
+    --stack-flat-x: -10%;
+    --stack-flat-y: 4%;
+  }
+
+  .card-stack[data-expanded] [data-motion-card-layer="2"] {
+    --stack-flat-x: 10%;
+    --stack-flat-y: 4%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-stack__layer,
+  .card-stack__metadata {
+    transition: none;
+  }
+
+  .card-stack__layer {
+    transform: translate(var(--stack-static-x, 0), var(--stack-static-y, 0));
+  }
+
+  [data-motion-card-layer="0"] {
+    --stack-static-x: -8%;
+    --stack-static-y: 4%;
+  }
+
+  [data-motion-card-layer="2"] {
+    --stack-static-x: 8%;
+    --stack-static-y: 4%;
+  }
+
+  .card-stack__metadata {
+    opacity: 1;
+  }
+}

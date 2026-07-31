@@ -1,12 +1,14 @@
 ---
 import type { Project } from '../data/site';
+import CardStack from './effects/CardStack.astro';
 interface Props {
   project: Project;
 }
 const { project } = Astro.props;
 ---
 
-<article class="project-card">
+<article class="project-card" data-motion-card={project.index}>
+  <CardStack project={project} />
   <header>
     <span>{project.index}</span>
     {project.period && <time>{project.period}</time>}

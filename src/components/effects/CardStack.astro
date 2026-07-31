@@ -1,0 +1,25 @@
+---
+import type { Project } from '../../data/site';
+import ProjectPoster from './ProjectPoster.astro';
+
+interface Props {
+  project: Project;
+}
+
+const { project } = Astro.props;
+const metadata = project.featured
+  ? [
+      ...project.facts,
+      ...(project.metrics ?? []).map((item) => `${item.value} / ${item.label}`),
+    ]
+  : [project.period, ...project.stack, ...project.facts].filter(Boolean);
+---
+
+<div class="card-stack" data-motion-card-stack aria-hidden="true">
+  {[0, 1, 2].map((layer) => (
+    <div class="card-stack__layer" data-motion-card-layer={layer} aria-hidden="true">
+      <ProjectPoster project={project} variant="stack" layer={layer} />
+    </div>
+  ))}
+  <p class="card-stack__metadata">{metadata.slice(0, 3).join(' / ')}</p>
+</div>

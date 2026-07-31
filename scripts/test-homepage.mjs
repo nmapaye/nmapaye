@@ -135,6 +135,18 @@ test('infinite grid is a static 16-tile fallback without duplicate links', async
   assert.equal((html.match(/class="project-card"/g) ?? []).length, 3);
 });
 
+test('project cards keep their existing semantic content while exposing four decorative stacks', async () => {
+  const html = await readHomepage();
+  assert.equal((html.match(/data-motion-card=/g) ?? []).length, 4);
+  assert.equal((html.match(/data-motion-card-layer=/g) ?? []).length, 12);
+  assert.equal((html.match(/data-motion-card-layer=[^>]*aria-hidden="true"/g) ?? []).length, 12);
+  assert.equal((html.match(/class="work-feature"/g) ?? []).length, 1);
+  assert.equal((html.match(/class="project-card"/g) ?? []).length, 3);
+  assert.match(html, /href="\/writing\/aurora-private-caffeine-tracking\/"/);
+  assert.match(html, /href="https:\/\/github\.com\/nmapaye\/embnode"/);
+  assert.match(html, /DMA sampling with prioritized FreeRTOS tasks/);
+});
+
 test('media block extraction scopes matching CSS and preserves quoted content', () => {
   const css = `
     .out-of-media { content: "decoy"; }
