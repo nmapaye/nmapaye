@@ -43,13 +43,15 @@ export function mountTextEffects(context) {
   );
   const shuffles = [...document.querySelectorAll('[data-motion-shuffle]')].map(
     (element, index) => {
-      const cardId = element.closest('[data-motion-card]')?.dataset.motionCard;
+      const card = element.closest('[data-motion-card]');
       return {
+        card,
         element,
+        interactiveOwner: element.closest('a, button, [tabindex]'),
         zone: motionZone(element),
         visual: element.querySelector('[data-motion-shuffle-visual]'),
         label: element.getAttribute('data-motion-shuffle-label') ?? '',
-        owner: cardId ? `shuffle:${cardId}` : `shuffle:label:${index}`,
+        owner: card ? `shuffle:${card.dataset.motionCard}` : `shuffle:label:${index}`,
         startedAt: null,
         triggerCount: 0,
         baseDuration: 400,
@@ -63,6 +65,9 @@ export function mountTextEffects(context) {
   const zoneVisibility = new Map(zones.map((zone) => [zone, true]));
   const shakeByElement = new Map(shakes.map((entry) => [entry.element, entry]));
   const shuffleByElement = new Map(shuffles.map((entry) => [entry.element, entry]));
+  const shuffleByInteractiveOwner = new Map(shuffles
+    .filter((entry) => entry.interactiveOwner)
+    .map((entry) => [entry.interactiveOwner, entry]));
   let visibilityObserver = null;
 
   function cancelSchedulerIfIdle() {
@@ -210,29 +215,53 @@ export function mountTextEffects(context) {
     const eventElement = event.target.closest?.('*');
     if (!eventElement) return null;
     const directShuffle = eventElement.closest('[data-motion-shuffle]');
-    const scopedShuffle = eventElement.closest('[data-motion-card]')?.querySelector(
+    const directEntry = shuffleByElement.get(directShuffle);
+    if (directEntry) {
+      return {
+        entry: directEntry,
+        cancel: cancelShuffle,
+        pointerBoundary:
+          directEntry.card ?? directEntry.interactiveOwner ?? directEntry.element,
+      };
+    }
+    const card = eventElement.closest('[data-motion-card]');
+    const scopedShuffle = card?.querySelector(
       '[data-motion-shuffle]',
     );
-    const interactiveShuffle = eventElement.closest('a, button, [tabindex]')?.querySelector(
-      '[data-motion-shuffle]',
-    );
-    const shuffle = directShuffle ?? scopedShuffle ?? interactiveShuffle;
-    if (shuffleByElement.has(shuffle)) {
-      return { entry: shuffleByElement.get(shuffle), cancel: cancelShuffle };
+    const scopedEntry = shuffleByElement.get(scopedShuffle);
+    if (scopedEntry) {
+      return { entry: scopedEntry, cancel: cancelShuffle, pointerBoundary: card };
+    }
+    const interactiveOwner = eventElement.closest('a, button, [tabindex]');
+    const interactiveEntry = shuffleByInteractiveOwner.get(interactiveOwner);
+    if (interactiveEntry) {
+      return {
+        entry: interactiveEntry,
+        cancel: cancelShuffle,
+        pointerBoundary: interactiveOwner,
+      };
     }
     const directShake = eventElement.closest('[data-motion-shake]');
     const relatedId = eventElement.closest('[data-motion-shake-related]')
       ?.getAttribute('data-motion-shake-related');
     const shake = directShake ?? (relatedId ? document.getElementById(relatedId) : null);
     return shakeByElement.has(shake)
-      ? { entry: shakeByElement.get(shake), cancel: cancelShake }
+      ? {
+          entry: shakeByElement.get(shake),
+          cancel: cancelShake,
+          pointerBoundary: shake,
+        }
       : null;
   }
 
   function onTrigger(event) {
     const resolved = resolveTarget(event);
     if (!resolved) return;
-    if (event.type === 'pointerover' && event.relatedTarget && resolved.entry.element.contains(event.relatedTarget)) return;
+    if (
+      event.type === 'pointerover' &&
+      event.relatedTarget &&
+      resolved.pointerBoundary.contains(event.relatedTarget)
+    ) return;
     start(resolved.entry, resolved.cancel, event.target);
   }
 

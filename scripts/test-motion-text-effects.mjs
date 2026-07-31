@@ -165,15 +165,16 @@ function createHarness({ observer = true } = {}) {
   for (let layer = 0; layer < 3; layer += 1) {
     secondStack.append(new FakeNode({ attrs: { 'data-motion-card-layer': String(layer) } }));
   }
-  const chapters = ['Work', 'Experience', 'Notes', 'Contact'].map((label) => {
+  const chapters = ['Work', 'Experience', 'Notes', 'Contact'].map((label, index) => {
     const link = nav.append(new FakeNode({ attrs: { href: `#${label.toLowerCase()}` } }));
     link.tagName = 'a';
+    const number = link.append(new FakeNode({ text: `0${index + 1} /` }));
     const chapter = link.append(new FakeNode({
       attrs: { 'data-motion-shuffle': '', 'data-motion-shuffle-label': label },
     }));
     const text = chapter.append(new FakeNode({ text: label }));
     const visual = chapter.append(new FakeNode({ attrs: { 'data-motion-shuffle-visual': '', 'aria-hidden': 'true' }, text: label }));
-    return { chapter, link, text, visual };
+    return { chapter, link, number, text, visual };
   });
   const [{ chapter, text: chapterText, visual: chapterVisual }] = chapters;
   const chapterLink = chapters[0].link;
@@ -186,6 +187,18 @@ function createHarness({ observer = true } = {}) {
     attrs: { 'data-motion-shuffle-visual': '', 'aria-hidden': 'true' },
     text: 'Unrelated',
   }));
+  const outerInteractive = nav.append(new FakeNode({ attrs: { tabindex: '0' } }));
+  const innerInteractive = outerInteractive.append(new FakeNode());
+  innerInteractive.tagName = 'button';
+  const nestedNumber = innerInteractive.append(new FakeNode({ text: '05 /' }));
+  const nestedShuffle = innerInteractive.append(new FakeNode({
+    attrs: { 'data-motion-shuffle': '', 'data-motion-shuffle-label': 'Nested' },
+  }));
+  const nestedText = nestedShuffle.append(new FakeNode({ text: 'Nested' }));
+  const nestedVisual = nestedShuffle.append(new FakeNode({
+    attrs: { 'data-motion-shuffle-visual': '', 'aria-hidden': 'true' },
+    text: 'Nested',
+  }));
   document.body = body;
   document.querySelectorAll = (selector) => {
     if (selector === '[data-motion-shake]') return [heroTitle, workTitle];
@@ -193,6 +206,7 @@ function createHarness({ observer = true } = {}) {
       project,
       ...chapters.map(({ chapter: item }) => item),
       inertShuffle,
+      nestedShuffle,
     ];
     if (selector === '[data-motion-card]') return [projectCard, secondCard];
     return [];
@@ -221,14 +235,15 @@ function createHarness({ observer = true } = {}) {
   return {
     body, browserWindow, chapter, chapterLink, chapterText, chapterVisual, chapters, context,
     controller, hero, heroTitle, inertShuffle, inertText, inertVisual, inertWrapper,
-    intersectionObserver, nav, project, projectLink,
+    innerInteractive, intersectionObserver, nav, nestedNumber, nestedShuffle, nestedText,
+    nestedVisual, outerInteractive, project, projectLink,
     projectCard, projectH3, projectStack, projectText, projectVisual, requested,
     secondCard, secondStack, setNow(value) { now = value; }, work, workTitle,
   };
 }
 
-function trigger(harness, target, type = 'pointerover') {
-  harness.context.root.ownerDocument.dispatch(type, { target });
+function trigger(harness, target, type = 'pointerover', details = {}) {
+  harness.context.root.ownerDocument.dispatch(type, { ...details, target });
 }
 
 test('production project shuffles claim their card owner while Chapter Index labels remain distinct', () => {
@@ -267,6 +282,53 @@ test('Chapter Index focus on its link starts the contained shuffle and resolves 
   assert.equal(experience.chapter.getAttribute('data-active'), null);
   assert.equal(experience.visual.textContent, 'Experience');
   assert.equal(experience.text.textContent, 'Experience');
+});
+
+test('Chapter Index pointer movement within one link keeps the original 400ms deadline', () => {
+  const harness = createHarness();
+  const experience = harness.chapters[1];
+
+  trigger(harness, experience.number);
+  assert.equal(experience.chapter.getAttribute('data-active'), '');
+  assert.equal(harness.context.coordinator.owner, 'shuffle:label:2');
+  harness.controller.update(100);
+
+  harness.setNow(150);
+  trigger(harness, experience.text, 'pointerover', {
+    relatedTarget: experience.number,
+  });
+  harness.controller.update(399);
+  assert.equal(experience.chapter.getAttribute('data-active'), '');
+  harness.controller.update(400);
+  assert.equal(experience.chapter.getAttribute('data-active'), null);
+  assert.equal(experience.visual.textContent, 'Experience');
+  assert.equal(experience.text.textContent, 'Experience');
+  assert.equal(harness.context.coordinator.owner, null);
+  assert.equal(harness.requested.size, 0);
+});
+
+test('nested interactive wrappers delegate only to the shuffle owned by the nearest control', () => {
+  const harness = createHarness();
+
+  trigger(harness, harness.outerInteractive, 'focusin');
+  assert.equal(harness.nestedShuffle.getAttribute('data-active'), null);
+  assert.equal(harness.context.coordinator.owner, null);
+  assert.equal(harness.requested.size, 0);
+
+  trigger(harness, harness.innerInteractive, 'focusin');
+  assert.equal(harness.nestedShuffle.getAttribute('data-active'), '');
+  assert.equal(harness.context.coordinator.owner, 'shuffle:label:6');
+  harness.controller.update(100);
+  harness.setNow(150);
+  trigger(harness, harness.nestedText, 'pointerover', {
+    relatedTarget: harness.nestedNumber,
+  });
+  harness.controller.update(400);
+  assert.equal(harness.nestedShuffle.getAttribute('data-active'), null);
+  assert.equal(harness.nestedVisual.textContent, 'Nested');
+  assert.equal(harness.nestedText.textContent, 'Nested');
+  assert.equal(harness.context.coordinator.owner, null);
+  assert.equal(harness.requested.size, 0);
 });
 
 test('noninteractive wrappers do not trigger a contained shuffle', () => {
