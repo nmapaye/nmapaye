@@ -51,6 +51,7 @@ export function mountPointerEffects(context) {
   const visibleZones = new Map(zones.map((zone) => [zone, true]));
   const state = {
     pointer: null,
+    pointerZone: null,
     previousFrame: null,
     running: false,
     lastSticker: null,
@@ -68,6 +69,7 @@ export function mountPointerEffects(context) {
   };
   const clearPointer = () => {
     state.pointer = null;
+    state.pointerZone = null;
     state.lastSticker = null;
     state.stickerZone = null;
     hide(blobNodes);
@@ -214,7 +216,13 @@ export function mountPointerEffects(context) {
 
   const observer = context.observerFactory?.((entries) => {
     for (const entry of entries) {
-      if (visibleZones.has(entry.target)) visibleZones.set(entry.target, entry.isIntersecting);
+      if (!visibleZones.has(entry.target)) continue;
+      visibleZones.set(entry.target, entry.isIntersecting);
+      if (!entry.isIntersecting && state.pointerZone === entry.target) {
+        clearPointer();
+        clearStickers();
+        stopIfIdle();
+      }
     }
   }, { threshold: 0 });
   for (const zone of zones) observer?.observe(zone);
@@ -236,6 +244,7 @@ export function mountPointerEffects(context) {
     }
     for (const sample of samples) {
       state.pointer = { x: sample.clientX, y: sample.clientY };
+      state.pointerZone = zone;
       if (!zone.matches('[data-motion-showcase]')) {
         state.lastSticker = null;
         state.stickerZone = null;

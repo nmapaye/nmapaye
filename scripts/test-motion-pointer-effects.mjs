@@ -247,6 +247,32 @@ test('offscreen motion zones ignore pointer movement without scheduling a frame'
   assert.equal(harness.blobs.some((node) => node.attrs.has('data-active')), false);
 });
 
+test('an active offscreen zone clears pointer effects and cancels its scheduler client', () => {
+  const harness = createPointerHarness();
+  harness.dispatch('pointermove', {
+    target: harness.showcase,
+    clientX: 0,
+    clientY: 0,
+    timeStamp: 0,
+  });
+  harness.dispatch('pointermove', {
+    target: harness.showcase,
+    clientX: 70,
+    clientY: 0,
+    timeStamp: 70,
+  });
+  harness.controller.update(16);
+  assert.equal(harness.requested.size, 1);
+  assert.equal(harness.blobs.some((node) => node.attrs.has('data-active')), true);
+  assert.equal(harness.stickers.some((node) => node.attrs.has('data-active')), true);
+
+  harness.observer.emit([{ target: harness.showcase, isIntersecting: false }]);
+
+  assert.equal(harness.requested.size, 0);
+  assert.equal(harness.blobs.some((node) => node.attrs.has('data-active')), false);
+  assert.equal(harness.stickers.some((node) => node.attrs.has('data-active')), false);
+});
+
 test('burst lifetime begins at the trigger timestamp between scheduler frames', () => {
   const frames = [];
   const scheduler = createFrameScheduler({
