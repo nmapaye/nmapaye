@@ -116,10 +116,11 @@ export function initializeMotion(root, environment = {}) {
     signal: abortController.signal,
     policy: null,
     refreshPolicy: null,
-    lockForNavigation: () => {},
+    lockForNavigation: null,
   };
   const controllers = [];
   let navigationLocked = false;
+  let unlockNavigation = null;
   let latestRawPolicy = null;
   const applyNavigationLock = (policy) => (
     navigationLocked
@@ -133,47 +134,61 @@ export function initializeMotion(root, environment = {}) {
         }
       : { ...policy, navigationActive: false }
   );
+  function applyPolicy(policy) {
+    const wasHidden = context.policy?.hidden;
+    latestRawPolicy = policy;
+    const effectivePolicy = applyNavigationLock(policy);
+    context.policy = effectivePolicy;
+    for (const controller of controllers) {
+      try {
+        controller.setPolicy?.(
+          controller.navigation ? policy : effectivePolicy,
+        );
+      } catch (error) {
+        context.onError(error, controller);
+      }
+    }
+    const settledPolicy = applyNavigationLock(latestRawPolicy);
+    context.policy = settledPolicy;
+    if (effectivePolicy.navigationActive && !settledPolicy.navigationActive) {
+      for (const controller of controllers) {
+        if (controller.navigation) continue;
+        try {
+          controller.setPolicy?.(settledPolicy);
+        } catch (error) {
+          context.onError(error, controller);
+        }
+      }
+    }
+    if (!settledPolicy.motionAllowed) context.coordinator.cancelCurrent();
+    if (settledPolicy.hidden || settledPolicy.navigationActive) {
+      scheduler.cancelAll();
+      scheduler.suspend();
+    } else {
+      if (wasHidden) scheduler.resetTiming();
+      scheduler.resume();
+      if (!settledPolicy.motionAllowed) scheduler.cancelAll();
+    }
+  }
+  context.lockForNavigation = () => {
+    if (navigationLocked) return unlockNavigation;
+    navigationLocked = true;
+    let unlocked = false;
+    unlockNavigation = () => {
+      if (unlocked) return;
+      unlocked = true;
+      navigationLocked = false;
+      applyPolicy(latestRawPolicy ?? context.policy);
+    };
+    applyPolicy(latestRawPolicy ?? context.policy);
+    return unlockNavigation;
+  };
   const observePolicy = environment.observePolicy ?? observeMotionPolicy;
   const observedPolicy = observePolicy({
     window: browserWindow,
     document: browserDocument,
     signal: abortController.signal,
-    onChange(policy) {
-      const wasHidden = context.policy?.hidden;
-      latestRawPolicy = policy;
-      const effectivePolicy = applyNavigationLock(policy);
-      context.policy = effectivePolicy;
-      for (const controller of controllers) {
-        try {
-          controller.setPolicy?.(
-            controller.navigation ? policy : effectivePolicy,
-          );
-        } catch (error) {
-          context.onError(error, controller);
-        }
-      }
-      const settledPolicy = applyNavigationLock(latestRawPolicy);
-      context.policy = settledPolicy;
-      if (effectivePolicy.navigationActive && !settledPolicy.navigationActive) {
-        for (const controller of controllers) {
-          if (controller.navigation) continue;
-          try {
-            controller.setPolicy?.(settledPolicy);
-          } catch (error) {
-            context.onError(error, controller);
-          }
-        }
-      }
-      if (!settledPolicy.motionAllowed) context.coordinator.cancelCurrent();
-      if (settledPolicy.hidden || settledPolicy.navigationActive) {
-        scheduler.cancelAll();
-        scheduler.suspend();
-      } else {
-        if (wasHidden) scheduler.resetTiming();
-        scheduler.resume();
-        if (!settledPolicy.motionAllowed) scheduler.cancelAll();
-      }
-    },
+    onChange: applyPolicy,
   });
   if (context.policy === null) {
     latestRawPolicy = observedPolicy?.current ?? observedPolicy;
