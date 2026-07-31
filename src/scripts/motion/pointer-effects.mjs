@@ -49,6 +49,10 @@ export function mountPointerEffects(context) {
     '[data-motion-hero], [data-motion-showcase]',
   )];
   const visibleZones = new Map(zones.map((zone) => [zone, true]));
+  const listenerAbortController = new AbortController();
+  const abortPointerListeners = () => listenerAbortController.abort();
+  if (context.signal?.aborted) abortPointerListeners();
+  else context.signal?.addEventListener('abort', abortPointerListeners, { once: true });
   const state = {
     pointer: null,
     pointerZone: null,
@@ -201,6 +205,8 @@ export function mountPointerEffects(context) {
       if (!policy.finePointerEffects && state.particles.length === 0) stopIfIdle();
     },
     destroy() {
+      listenerAbortController.abort();
+      context.signal?.removeEventListener?.('abort', abortPointerListeners);
       clearPointer();
       clearStickers();
       cancelBurst();
@@ -215,18 +221,45 @@ export function mountPointerEffects(context) {
     },
   };
 
-  const observer = context.observerFactory?.((entries) => {
-    for (const entry of entries) {
-      if (!visibleZones.has(entry.target)) continue;
-      visibleZones.set(entry.target, entry.isIntersecting);
-      if (!entry.isIntersecting && state.pointerZone === entry.target) {
-        clearPointer();
-        clearStickers();
-        stopIfIdle();
-      }
+  function applyZoneVisibility(zone, nextVisible) {
+    if (!visibleZones.has(zone)) return;
+    visibleZones.set(zone, nextVisible);
+    if (!nextVisible && state.pointerZone === zone) {
+      clearPointer();
+      clearStickers();
+      stopIfIdle();
     }
+  }
+
+  const observer = context.observerFactory?.((entries) => {
+    for (const entry of entries) applyZoneVisibility(entry.target, entry.isIntersecting);
   }, { threshold: 0 });
-  for (const zone of zones) observer?.observe(zone);
+  if (observer) {
+    for (const zone of zones) observer.observe(zone);
+  } else {
+    const browserWindow = context.window ?? context.root.ownerDocument.defaultView;
+    const refreshFallbackVisibility = () => {
+      for (const zone of zones) {
+        const rect = zone.getBoundingClientRect();
+        applyZoneVisibility(
+          zone,
+          rect.bottom > 0 &&
+            rect.top < (browserWindow?.innerHeight ?? rect.bottom) &&
+            rect.right > 0 &&
+            rect.left < (browserWindow?.innerWidth ?? rect.right),
+        );
+      }
+    };
+    refreshFallbackVisibility();
+    browserWindow?.addEventListener('scroll', refreshFallbackVisibility, {
+      signal: listenerAbortController.signal,
+      passive: true,
+    });
+    browserWindow?.addEventListener('resize', refreshFallbackVisibility, {
+      signal: listenerAbortController.signal,
+      passive: true,
+    });
+  }
 
   function handlePointerMove(event) {
     const samples = event.getCoalescedEvents?.() || [event];
@@ -332,29 +365,29 @@ export function mountPointerEffects(context) {
   }
 
   context.root.ownerDocument.addEventListener('pointermove', handlePointerMove, {
-    signal: context.signal,
+    signal: listenerAbortController.signal,
     passive: true,
   });
   context.root.ownerDocument.addEventListener('pointerout', handlePointerOut, {
-    signal: context.signal,
+    signal: listenerAbortController.signal,
     passive: true,
   });
   context.root.ownerDocument.addEventListener('focusin', handleBurstTrigger, {
-    signal: context.signal,
+    signal: listenerAbortController.signal,
   });
   context.root.ownerDocument.addEventListener('pointerover', handleBurstTrigger, {
-    signal: context.signal,
+    signal: listenerAbortController.signal,
     passive: true,
   });
   context.root.ownerDocument.addEventListener('pointerdown', handleBurstTrigger, {
-    signal: context.signal,
+    signal: listenerAbortController.signal,
     passive: true,
   });
   context.window?.addEventListener?.('blur', () => {
     clearPointer();
     if (state.stickers.length || state.particles.length) request();
     else stopIfIdle();
-  }, { signal: context.signal });
+  }, { signal: listenerAbortController.signal });
 
   return controller;
 }

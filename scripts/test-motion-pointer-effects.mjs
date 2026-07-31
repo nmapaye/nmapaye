@@ -66,7 +66,11 @@ class FakeNode {
   }
 
   getBoundingClientRect() {
-    return this.rect;
+    return {
+      ...this.rect,
+      right: this.rect.right ?? this.rect.left + this.rect.width,
+      bottom: this.rect.bottom ?? this.rect.top + this.rect.height,
+    };
   }
 }
 
@@ -75,6 +79,7 @@ function createPointerHarness({
   clock = () => 0,
   kinetic = true,
   mount = true,
+  withObserver = true,
 } = {}) {
   const handlers = new Map();
   const windowHandlers = new Map();
@@ -84,8 +89,17 @@ function createPointerHarness({
   const stickers = Array.from({ length: 24 }, () => new FakeNode());
   const particles = Array.from({ length: 8 }, () => new FakeNode());
   let observer;
+  const addSignalOwnedListener = (store, type, listener, options = {}) => {
+    if (options.signal?.aborted) return;
+    store.set(type, listener);
+    options.signal?.addEventListener('abort', () => {
+      if (store.get(type) === listener) store.delete(type);
+    }, { once: true });
+  };
   const document = {
-    addEventListener(type, listener) { handlers.set(type, listener); },
+    addEventListener(type, listener, options) {
+      addSignalOwnedListener(handlers, type, listener, options);
+    },
     querySelectorAll(selector) {
       if (selector === '[data-motion-hero], [data-motion-showcase]') return [hero, showcase];
       return [];
@@ -120,6 +134,13 @@ function createPointerHarness({
     forcedColors: false,
     hidden: false,
   };
+  const browserWindow = {
+    innerHeight: 720,
+    innerWidth: 1280,
+    addEventListener(type, listener, options) {
+      addSignalOwnedListener(windowHandlers, type, listener, options);
+    },
+  };
   const context = {
     root,
     scheduler: activeScheduler,
@@ -128,30 +149,50 @@ function createPointerHarness({
     clock,
     random: () => 0.75,
     signal: new AbortController().signal,
-    window: { addEventListener(type, listener) { windowHandlers.set(type, listener); } },
-    observerFactory(callback) {
+    window: browserWindow,
+    observerFactory: withObserver ? (callback) => {
       observer = {
         observe() {},
         disconnect() {},
         emit(entries) { callback(entries); },
       };
       return observer;
-    },
+    } : () => null,
   };
   const controller = mount ? mountPointerEffects(context) : null;
   return {
     blobs,
+    browserWindow,
     controller,
     dispatch(type, event) { handlers.get(type)(event); },
+    dispatchIfPresent(type, event) { handlers.get(type)?.(event); },
     hero,
+    listenerCount(type) { return handlers.has(type) ? 1 : 0; },
     observer,
     particles,
     requested,
     root,
     showcase,
     stickers,
-    triggerWindow(type, event = {}) { windowHandlers.get(type)(event); },
+    triggerWindow(type, event = {}) { windowHandlers.get(type)?.(event); },
+    windowListenerCount(type) { return windowHandlers.has(type) ? 1 : 0; },
   };
+}
+
+function activateShowcasePointerEffects(harness) {
+  harness.dispatch('pointermove', {
+    target: harness.showcase,
+    clientX: 0,
+    clientY: 0,
+    timeStamp: 0,
+  });
+  harness.dispatch('pointermove', {
+    target: harness.showcase,
+    clientX: 70,
+    clientY: 0,
+    timeStamp: 70,
+  });
+  harness.controller.update(70);
 }
 
 test('stickers require both 60 pixels and 60 milliseconds', () => {
@@ -271,6 +312,73 @@ test('an active offscreen zone clears pointer effects and cancels its scheduler 
   assert.equal(harness.requested.size, 0);
   assert.equal(harness.blobs.some((node) => node.attrs.has('data-active')), false);
   assert.equal(harness.stickers.some((node) => node.attrs.has('data-active')), false);
+});
+
+test('fallback scroll clears active pointer effects when their zone leaves the viewport', () => {
+  const harness = createPointerHarness({ withObserver: false });
+  activateShowcasePointerEffects(harness);
+  assert.equal(harness.requested.size, 1);
+  assert.equal(harness.blobs.some((node) => node.attrs.has('data-active')), true);
+  assert.equal(harness.stickers.some((node) => node.attrs.has('data-active')), true);
+
+  harness.showcase.rect = { left: 0, top: 800, width: 100, height: 100 };
+  harness.triggerWindow('scroll');
+
+  assert.equal(harness.requested.size, 0);
+  assert.equal(harness.blobs.some((node) => node.attrs.has('data-active')), false);
+  assert.equal(harness.stickers.some((node) => node.attrs.has('data-active')), false);
+});
+
+test('fallback scroll clears active pointer effects when their zone leaves horizontally', () => {
+  const harness = createPointerHarness({ withObserver: false });
+  activateShowcasePointerEffects(harness);
+  assert.equal(harness.requested.size, 1);
+
+  harness.showcase.rect = { left: 1400, top: 0, width: 100, height: 100 };
+  harness.triggerWindow('scroll');
+
+  assert.equal(harness.requested.size, 0);
+  assert.equal(harness.blobs.some((node) => node.attrs.has('data-active')), false);
+  assert.equal(harness.stickers.some((node) => node.attrs.has('data-active')), false);
+});
+
+test('fallback resize clears active pointer effects when their zone leaves the viewport', () => {
+  const harness = createPointerHarness({ withObserver: false });
+  harness.showcase.rect = { left: 0, top: 650, width: 100, height: 100 };
+  activateShowcasePointerEffects(harness);
+  assert.equal(harness.requested.size, 1);
+
+  harness.browserWindow.innerHeight = 600;
+  harness.triggerWindow('resize');
+
+  assert.equal(harness.requested.size, 0);
+  assert.equal(harness.blobs.some((node) => node.attrs.has('data-active')), false);
+  assert.equal(harness.stickers.some((node) => node.attrs.has('data-active')), false);
+});
+
+test('direct destroy removes listeners so later events cannot restart pointer work', () => {
+  const harness = createPointerHarness({ withObserver: false });
+  const link = new FakeNode({ attrs: { 'data-motion-burst': '', href: '/work' } });
+
+  harness.controller.destroy();
+  harness.dispatchIfPresent('pointermove', {
+    target: harness.hero,
+    clientX: 20,
+    clientY: 20,
+    timeStamp: 20,
+  });
+  assert.equal(harness.requested.size, 0);
+
+  harness.dispatchIfPresent('pointerover', { target: link, relatedTarget: null });
+  harness.triggerWindow('blur');
+  assert.equal(harness.requested.size, 0);
+  assert.equal(harness.particles.some((node) => node.attrs.has('data-active')), false);
+  for (const type of ['pointermove', 'pointerout', 'focusin', 'pointerover', 'pointerdown']) {
+    assert.equal(harness.listenerCount(type), 0);
+  }
+  for (const type of ['blur', 'scroll', 'resize']) {
+    assert.equal(harness.windowListenerCount(type), 0);
+  }
 });
 
 test('burst lifetime begins at the trigger timestamp between scheduler frames', () => {
