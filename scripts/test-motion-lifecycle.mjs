@@ -6,6 +6,9 @@ import {
   initializeMotion,
 } from '../src/scripts/motion/index.mjs';
 import { mountNavigationWipe } from '../src/scripts/motion/navigation-wipe.mjs';
+import { mountPointerEffects } from '../src/scripts/motion/pointer-effects.mjs';
+import { mountMarquee } from '../src/scripts/motion/marquee.mjs';
+import { mountCardStacks } from '../src/scripts/motion/card-stack.mjs';
 import { createFrameScheduler } from '../src/scripts/motion/scheduler.mjs';
 
 test('initialization is idempotent and teardown destroys every controller', () => {
@@ -161,6 +164,19 @@ class FakeEventTarget {
     this.listeners = new Map();
     this.sequence = sequence;
     this.label = label;
+    this.dataset = {};
+    const properties = new Map();
+    this.style = {
+      setProperty(name, value) {
+        properties.set(name, String(value));
+        this[name.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())] = String(value);
+      },
+      removeProperty(name) {
+        properties.delete(name);
+        delete this[name.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())];
+      },
+      getPropertyValue(name) { return properties.get(name) ?? ''; },
+    };
   }
 
   addEventListener(type, listener, options = {}) {
@@ -199,6 +215,25 @@ class FakeEventTarget {
   getAttribute(name) {
     return this.attributes.get(name) ?? null;
   }
+
+  toggleAttribute(name, force) {
+    if (force) this.setAttribute(name, '');
+    else this.removeAttribute(name);
+  }
+
+  querySelector() { return null; }
+
+  querySelectorAll() { return []; }
+
+  closest() { return null; }
+
+  matches() { return false; }
+
+  contains(node) { return node === this; }
+
+  getBoundingClientRect() {
+    return { top: 0, bottom: 500, left: 0, width: 500, height: 500 };
+  }
 }
 
 function createClassList() {
@@ -213,10 +248,12 @@ function createClassList() {
 function createSchedulerHarness(sequence = []) {
   const active = new Set();
   let suspended = false;
+  let maxActive = 0;
   return {
     scheduler: {
       request(controller) {
         active.add(controller);
+        maxActive = Math.max(maxActive, active.size);
         sequence.push('scheduler:request');
         return true;
       },
@@ -250,6 +287,13 @@ function createSchedulerHarness(sequence = []) {
       },
     },
     active,
+    flush(timestamp) {
+      for (const controller of [...active]) {
+        if (!active.has(controller)) continue;
+        if (controller.update(timestamp) !== true) active.delete(controller);
+      }
+    },
+    get maxActive() { return maxActive; },
   };
 }
 
@@ -383,11 +427,14 @@ test('the default writing route mounts only navigation with zero background work
   assert.equal(dom.html.classList.contains('motion-ready'), false);
 });
 
-test('factory failures preserve static fallback and do not block later controllers', () => {
+test('failed initial policy is transactionally destroyed and does not block later controllers', () => {
   const dom = createLifecycleDom();
   const schedulerHarness = createSchedulerHarness();
   const fallback = new FakeEventTarget();
   const errors = [];
+  let emitPolicy;
+  let failedPolicies = 0;
+  let failedDestroys = 0;
   let laterPolicies = 0;
   let laterDestroys = 0;
 
@@ -396,12 +443,27 @@ test('factory failures preserve static fallback and do not block later controlle
     document: dom.document,
     scheduler: schedulerHarness.scheduler,
     observePolicy({ onChange }) {
+      emitPolicy = onChange;
       onChange(visiblePolicy);
       return { current: visiblePolicy };
     },
     onError(error) { errors.push(error); },
     controllerFactories: [
-      () => { throw new Error('factory failed before enhancement'); },
+      () => {
+        fallback.setAttribute('data-motion-enhanced', '');
+        fallback.setAttribute('hidden', '');
+        return {
+          setPolicy() {
+            failedPolicies += 1;
+            throw new Error('initial policy failed after enhancement');
+          },
+          destroy() {
+            failedDestroys += 1;
+            fallback.removeAttribute('data-motion-enhanced');
+            fallback.removeAttribute('hidden');
+          },
+        };
+      },
       () => ({
         setPolicy() { laterPolicies += 1; },
         destroy() { laterDestroys += 1; },
@@ -412,9 +474,61 @@ test('factory failures preserve static fallback and do not block later controlle
   assert.equal(errors.length, 1);
   assert.equal(fallback.hasAttribute('data-motion-enhanced'), false);
   assert.equal(fallback.hasAttribute('hidden'), false);
+  assert.equal(failedPolicies, 1);
+  assert.equal(failedDestroys, 1);
   assert.equal(laterPolicies, 1);
+  emitPolicy({ ...visiblePolicy, finePointerEffects: false });
+  assert.equal(failedPolicies, 1);
+  assert.equal(laterPolicies, 2);
   mount.destroy();
+  assert.equal(failedDestroys, 1);
   assert.equal(laterDestroys, 1);
+});
+
+test('a throwing pagehide cannot skip static policy or later controller cleanup', () => {
+  const dom = createLifecycleDom();
+  const schedulerHarness = createSchedulerHarness();
+  const calls = [];
+  const errors = [];
+  initializeMotion(dom.root, {
+    window: dom.browserWindow,
+    document: dom.document,
+    scheduler: schedulerHarness.scheduler,
+    onError(error) { errors.push(error); },
+    observePolicy({ onChange }) {
+      onChange(visiblePolicy);
+      return { current: visiblePolicy };
+    },
+    controllerFactories: [
+      () => ({
+        setPolicy(policy) { calls.push(['first-policy', policy]); },
+        pagehide() {
+          calls.push(['first-pagehide']);
+          throw new Error('pagehide failed');
+        },
+      }),
+      () => ({
+        setPolicy(policy) { calls.push(['second-policy', policy]); },
+        pagehide() { calls.push(['second-pagehide']); },
+      }),
+    ],
+  });
+  calls.length = 0;
+
+  dom.browserWindow.dispatch('pagehide', {});
+
+  assert.equal(errors.length, 1);
+  assert.deepEqual(calls.map(([name]) => name), [
+    'first-pagehide',
+    'first-policy',
+    'second-pagehide',
+    'second-policy',
+  ]);
+  for (const [, policy] of calls.filter(([name]) => name.endsWith('policy'))) {
+    assert.equal(policy.motionAllowed, false);
+    assert.equal(policy.hidden, true);
+  }
+  assert.equal(schedulerHarness.scheduler.snapshot().suspended, true);
 });
 
 function makeActivityFactory(name, state) {
@@ -564,21 +678,240 @@ test('navigation broadcasts static policy before activation and keeps live polic
   assert.equal(harness.state.destroys.length, 3);
 });
 
-test('grid and navigation preemption never exceed the three-client bound', () => {
-  const harness = createOrchestrationHarness();
-  const gridClient = { update() { return true; } };
-  assert.equal(harness.schedulerHarness.scheduler.snapshot().active, 3);
+function createRealControllerHarness() {
+  const sequence = [];
+  const document = new FakeEventTarget(sequence, 'document');
+  const browserWindow = new FakeEventTarget(sequence, 'window');
+  const html = { classList: createClassList() };
+  const hero = new FakeEventTarget(sequence, 'hero');
+  const showcase = new FakeEventTarget(sequence, 'showcase');
+  const blob = new FakeEventTarget(sequence, 'blob');
+  const sticker = new FakeEventTarget(sequence, 'sticker');
+  const particle = new FakeEventTarget(sequence, 'particle');
+  const wipeLayer = new FakeEventTarget(sequence, 'wipe');
+  const panels = ['red', 'yellow', 'green'].map(
+    (color) => new FakeEventTarget(sequence, `wipe-${color}`),
+  );
+  const marquee = new FakeEventTarget(sequence, 'marquee');
+  const tracks = [
+    new FakeEventTarget(sequence, 'marquee-track-1'),
+    new FakeEventTarget(sequence, 'marquee-track-2'),
+  ];
+  for (const track of tracks) track.scrollWidth = 500;
+  marquee.closest = (selector) => selector === '[data-motion-hero]' ? hero : null;
+  marquee.querySelectorAll = (selector) => (
+    selector === '[data-motion-marquee-track]' ? tracks : []
+  );
 
-  harness.state.context.coordinator.preempt('grid', 2, () => {
-    harness.schedulerHarness.scheduler.cancel(gridClient);
+  const card = new FakeEventTarget(sequence, 'card');
+  const stack = new FakeEventTarget(sequence, 'card-stack');
+  const cardLayers = Array.from(
+    { length: 3 },
+    (_, index) => new FakeEventTarget(sequence, `card-layer-${index}`),
+  );
+  card.dataset.motionCard = '01';
+  card.closest = (selector) => selector === '[data-motion-showcase]' ? showcase : null;
+  card.querySelector = (selector) => {
+    if (selector === '[data-motion-card-stack]') return stack;
+    return null;
+  };
+  stack.querySelectorAll = (selector) => (
+    selector === '[data-motion-card-layer]' ? cardLayers : []
+  );
+
+  hero.closest = (selector) => (
+    selector === '[data-motion-hero], [data-motion-showcase]' ? hero : null
+  );
+  hero.matches = (selector) => selector === '[data-motion-hero]';
+  showcase.closest = (selector) => (
+    selector === '[data-motion-hero], [data-motion-showcase]' ? showcase : null
+  );
+  showcase.matches = (selector) => selector === '[data-motion-showcase]';
+
+  document.defaultView = browserWindow;
+  document.documentElement = html;
+  document.hidden = false;
+  document.querySelector = (selector) => (
+    selector === '[data-motion-marquee]' ? marquee : null
+  );
+  document.querySelectorAll = (selector) => {
+    if (selector === '[data-motion-hero], [data-motion-showcase]') return [hero, showcase];
+    if (selector === '[data-motion-card]') return [card];
+    return [];
+  };
+  const timers = new Map();
+  let timerId = 0;
+  const destinations = [];
+  browserWindow.location = {
+    href: 'https://nmapaye.com/',
+    assign(destination) { destinations.push(destination); },
+  };
+  browserWindow.scrollY = 0;
+  browserWindow.innerHeight = 900;
+  browserWindow.setTimeout = (callback, delay) => {
+    const id = ++timerId;
+    timers.set(id, { callback, delay });
+    sequence.push('timer:set');
+    return id;
+  };
+  browserWindow.clearTimeout = (id) => timers.delete(id);
+
+  const root = {
+    ownerDocument: document,
+    getAttribute(name) {
+      return name === 'data-motion-kinetic' ? 'true' : null;
+    },
+    querySelector(selector) {
+      return selector === '[data-motion-wipe]' ? wipeLayer : null;
+    },
+    querySelectorAll(selector) {
+      if (selector === '[data-motion-wipe-panel]') return panels;
+      if (selector === '[data-motion-blob]') return [blob];
+      if (selector === '[data-motion-sticker]') return [sticker];
+      if (selector === '[data-motion-particle]') return [particle];
+      return [];
+    },
+  };
+  const schedulerHarness = createSchedulerHarness(sequence);
+  const deliveries = [];
+  let context;
+  let clock = 0;
+  const wrapFactory = (name, factory) => (controllerContext) => {
+    context = controllerContext;
+    const mounted = factory(controllerContext);
+    return {
+      setPolicy(policy) {
+        deliveries.push({ name, policy });
+        sequence.push(`policy:real:${name}:${policy.navigationActive}`);
+        mounted.setPolicy(policy);
+      },
+      destroy() { mounted.destroy(); },
+    };
+  };
+  const mount = initializeMotion(root, {
+    window: browserWindow,
+    document,
+    scheduler: schedulerHarness.scheduler,
+    clock: () => clock,
+    random: () => 0.75,
+    observerFactory: () => null,
+    observePolicy({ onChange }) {
+      onChange(visiblePolicy);
+      return { current: visiblePolicy };
+    },
+    controllerFactories: [
+      mountNavigationWipe,
+      wrapFactory('pointer', mountPointerEffects),
+      wrapFactory('marquee', mountMarquee),
+      wrapFactory('card', mountCardStacks),
+    ],
   });
-  assert.equal(harness.schedulerHarness.scheduler.snapshot().active, 2);
-  harness.schedulerHarness.scheduler.request(gridClient);
-  assert.equal(harness.schedulerHarness.scheduler.snapshot().active, 3);
 
-  harness.click('/writing/');
+  function seedActivity() {
+    clock = 70;
+    document.dispatch('pointermove', {
+      target: showcase,
+      clientX: 10,
+      clientY: 10,
+      timeStamp: 0,
+    });
+    document.dispatch('pointermove', {
+      target: showcase,
+      clientX: 80,
+      clientY: 10,
+      timeStamp: 70,
+    });
+    schedulerHarness.flush(70);
+
+    clock = 100;
+    browserWindow.scrollY = 120;
+    browserWindow.dispatch('scroll', {});
+    card.dispatch('pointerenter', { target: card });
+    schedulerHarness.flush(116);
+    schedulerHarness.flush(132);
+  }
+
+  function click(href) {
+    const anchor = new FakeEventTarget(sequence, 'anchor');
+    anchor.setAttribute('href', href);
+    anchor.closest = (selector) => selector === 'a[href]' ? anchor : null;
+    let prevented = 0;
+    document.dispatch('click', {
+      target: anchor,
+      button: 0,
+      metaKey: false,
+      ctrlKey: false,
+      shiftKey: false,
+      altKey: false,
+      defaultPrevented: false,
+      preventDefault() { prevented += 1; },
+    });
+    return prevented;
+  }
+
+  return {
+    blob,
+    cardLayers,
+    click,
+    context: () => context,
+    deliveries,
+    destinations,
+    marquee,
+    mount,
+    panels,
+    schedulerHarness,
+    seedActivity,
+    sequence,
+    stack,
+    sticker,
+    timers,
+    tracks,
+    wipeLayer,
+  };
+}
+
+test('mounted motion clients clear exact transient state before navigation activates', () => {
+  const gridHarness = createRealControllerHarness();
+  gridHarness.seedActivity();
+  assert.equal(gridHarness.schedulerHarness.scheduler.snapshot().active, 3);
+  assert.equal(gridHarness.schedulerHarness.maxActive, 3);
+  assert.equal(gridHarness.context().coordinator.owner, 'card:01');
+  gridHarness.context().coordinator.preempt('grid', 2);
+  assert.equal(gridHarness.schedulerHarness.scheduler.snapshot().active, 2);
+  assert.equal(gridHarness.schedulerHarness.maxActive <= 3, true);
+  gridHarness.mount.destroy();
+
+  const harness = createRealControllerHarness();
+  harness.seedActivity();
+  assert.equal(harness.schedulerHarness.scheduler.snapshot().active, 3);
+  assert.equal(harness.blob.hasAttribute('data-active'), true);
+  assert.equal(harness.sticker.hasAttribute('data-active'), true);
+  assert.notEqual(harness.marquee.style.getPropertyValue('--motion-marquee-x'), '');
+  assert.equal(harness.stack.hasAttribute('data-expanded'), true);
+  assert.equal(harness.context().coordinator.owner, 'card:01');
+
+  assert.equal(harness.click('/writing/'), 1);
+  const wipeActivation = harness.sequence.indexOf('attribute:wipe:data-active');
+  for (const name of ['pointer', 'marquee', 'card']) {
+    assert.equal(
+      harness.sequence.lastIndexOf(`policy:real:${name}:true`) < wipeActivation,
+      true,
+      `${name} receives the static navigation policy before the wipe`,
+    );
+  }
+  assert.equal(harness.deliveries.slice(-3).every(({ policy }) => (
+    policy.navigationActive && !policy.motionAllowed
+  )), true);
+  assert.equal(harness.blob.hasAttribute('data-active'), false);
+  assert.equal(harness.sticker.hasAttribute('data-active'), false);
+  assert.equal(harness.marquee.style.getPropertyValue('--motion-marquee-x'), '0px');
+  assert.equal(harness.cardLayers.every((layer) => layer.style.willChange === undefined), true);
   assert.equal(harness.schedulerHarness.scheduler.snapshot().active, 0);
+  assert.equal(harness.schedulerHarness.maxActive <= 3, true);
+  assert.notEqual(harness.context().coordinator.owner, 'card:01');
+  assert.equal(harness.context().coordinator.owner, 'navigation');
   assert.equal(harness.timers.size, 1);
+  assert.equal(harness.wipeLayer.hasAttribute('data-active'), true);
   harness.mount.destroy();
 });
 
@@ -640,8 +973,16 @@ test('hidden pagehide and pageshow refresh policy before resume and clear the re
   harness.emitPolicy(hiddenPolicy);
   harness.browserWindow.dispatch('pagehide', {});
   assert.equal(harness.state.pagehides.length, 3);
+  const afterPagehidePolicies = harness.state.policies.length;
+  harness.emitPolicy(visiblePolicy);
+  assert.equal(harness.state.policies.length, afterPagehidePolicies + 3);
+  assert.equal(harness.state.policies.slice(-3).every(({ policy }) => (
+    policy.motionAllowed === false && policy.hidden === true
+  )), true);
+  assert.equal(harness.schedulerHarness.scheduler.snapshot().suspended, true);
   harness.document.hidden = false;
   harness.setRefreshedPolicy(visiblePolicy);
+  const beforePageShowPolicies = harness.state.policies.length;
   const beforePageShow = harness.sequence.length;
   harness.browserWindow.dispatch('pageshow', {});
   const pageShowSequence = harness.sequence.slice(beforePageShow);
@@ -651,11 +992,23 @@ test('hidden pagehide and pageshow refresh policy before resume and clear the re
       < pageShowSequence.indexOf('scheduler:resume'),
     true,
   );
+  assert.equal(
+    harness.state.policies.slice(beforePageShowPolicies)
+      .filter(({ policy }) => policy.motionAllowed && !policy.hidden)
+      .length,
+    3,
+  );
   assert.equal(harness.state.policies.slice(-3).every(({ policy }) => (
     policy.navigationActive === false && policy.motionAllowed && !policy.hidden
   )), true);
   assert.equal(harness.schedulerHarness.scheduler.snapshot().active, 0);
   assert.equal(harness.click('/other/'), 1);
+  assert.equal(harness.click('/ignored/'), 1);
   assert.equal(harness.timers.size, 1);
+  assert.equal(harness.runTimer(), true);
+  assert.deepEqual(harness.destinations, [
+    'https://nmapaye.com/writing/',
+    'https://nmapaye.com/other/',
+  ]);
   harness.mount.destroy();
 });

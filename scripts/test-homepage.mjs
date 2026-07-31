@@ -189,6 +189,37 @@ test('motion markup uses fixed decorative pools and canonical poster assets', as
   assert.doesNotMatch(html, /data-motion-grid[^>]*tabindex="0"/);
 });
 
+test('built navigation wipe keeps the exact bounded accessibility sequence', async () => {
+  const [html, css] = await Promise.all([readHomepage(), readBuiltCss()]);
+  assert.equal((html.match(/data-motion-wipe-panel=/g) ?? []).length, 3);
+  assert.deepEqual(
+    [...html.matchAll(/data-motion-wipe-panel="([^"]+)"/g)].map((match) => match[1]),
+    ['red', 'yellow', 'green'],
+  );
+
+  const rule = (selector) => {
+    const block = findExactCssRule(css, new RegExp(`^${selector}$`));
+    assert.ok(block, `missing compiled wipe selector: ${selector}`);
+    return block;
+  };
+  assert.match(
+    rule('\\.motion-wipe\\[data-active\\] \\[data-motion-wipe-panel\\]'),
+    /transition:transform (?:\.18s|180ms) steps\(4,end\)/,
+  );
+  assert.match(
+    rule('\\.motion-wipe\\[data-active\\] \\[data-motion-wipe-panel=yellow\\]'),
+    /transition-delay:45ms/,
+  );
+  assert.match(
+    rule('\\.motion-wipe\\[data-active\\] \\[data-motion-wipe-panel=green\\]'),
+    /transition-delay:90ms/,
+  );
+  assert.match(
+    css,
+    /@media\s*\(forced-colors:\s*active\),\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\[data-motion-blobs\],\[data-motion-stickers\],\[data-motion-particles\],\[data-motion-wipe\]\{display:none\}/,
+  );
+});
+
 test('infinite grid is a static 16-tile fallback without duplicate links', async () => {
   const html = await readHomepage();
   const grid = html.match(/<div class="infinite-project-grid"[\s\S]*?<\/div>\s*<\/div>/)?.[0] ?? '';

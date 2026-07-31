@@ -144,6 +144,7 @@ export function initializeMotion(root, environment = {}) {
   const controllers = [];
   let navigationLocked = false;
   let latestRawPolicy = null;
+  let pageInactive = false;
   const applyNavigationLock = (policy) => (
     navigationLocked
       ? {
@@ -156,6 +157,18 @@ export function initializeMotion(root, environment = {}) {
         }
       : { ...policy, navigationActive: false }
   );
+  const applyPageInactiveGate = (policy) => (
+    pageInactive
+      ? {
+          ...policy,
+          motionAllowed: false,
+          finePointerEffects: false,
+          blendAllowed: false,
+          perspectiveAllowed: false,
+          hidden: true,
+        }
+      : policy
+  );
   function applyPolicy(policy) {
     const wasInactive = context.policy && (
       context.policy.hidden
@@ -163,18 +176,20 @@ export function initializeMotion(root, environment = {}) {
       || context.policy.navigationActive
     );
     latestRawPolicy = policy;
-    const effectivePolicy = applyNavigationLock(policy);
+    const effectivePolicy = applyPageInactiveGate(applyNavigationLock(policy));
     context.policy = effectivePolicy;
     for (const controller of controllers) {
       try {
         controller.setPolicy?.(
-          controller.navigation ? policy : effectivePolicy,
+          controller.navigation && !pageInactive ? policy : effectivePolicy,
         );
       } catch (error) {
         context.onError(error, controller);
       }
     }
-    const settledPolicy = applyNavigationLock(latestRawPolicy ?? effectivePolicy);
+    const settledPolicy = applyPageInactiveGate(
+      applyNavigationLock(latestRawPolicy ?? effectivePolicy),
+    );
     if (
       effectivePolicy.navigationActive
       && !settledPolicy.navigationActive
@@ -263,20 +278,27 @@ export function initializeMotion(root, environment = {}) {
 
   const factories = environment.controllerFactories ?? defaultFactories(root);
   for (const factory of factories) {
+    let controller = null;
     try {
-      const controller = factory(context);
+      controller = factory(context);
       if (!controller) continue;
-      controllers.push(controller);
       controller.setPolicy?.(context.policy);
+      controllers.push(controller);
     } catch (error) {
       context.onError(error, factory);
+      if (controller) {
+        try {
+          controller.destroy?.();
+        } catch (destroyError) {
+          context.onError(destroyError, controller);
+        }
+      }
     }
   }
 
   const browserHtml = browserDocument?.documentElement;
   browserHtml?.classList.add('motion-ready');
   let destroyed = false;
-  let pageInactive = false;
 
   function applyPageInactive(reason) {
     if (pageInactive) return;
@@ -293,6 +315,10 @@ export function initializeMotion(root, environment = {}) {
     for (const controller of controllers) {
       try {
         controller.pagehide?.(reason);
+      } catch (error) {
+        context.onError(error, controller);
+      }
+      try {
         controller.setPolicy?.(staticPolicy);
       } catch (error) {
         context.onError(error, controller);
@@ -309,25 +335,12 @@ export function initializeMotion(root, environment = {}) {
 
   function onPageShow() {
     initializeMotion(root, environment);
-    pageInactive = false;
-    navigationLocked = false;
     scheduler.resetTiming();
     const refreshedPolicy = context.refreshPolicy();
     if (refreshedPolicy) latestRawPolicy = refreshedPolicy;
-    context.policy = applyNavigationLock(latestRawPolicy ?? context.policy);
-    if (context.policy.motionAllowed && !context.policy.hidden) scheduler.resume();
-    else scheduler.suspend();
-    for (const controller of controllers) {
-      try {
-        controller.setPolicy?.(
-          controller.navigation
-            ? (latestRawPolicy ?? context.policy)
-            : context.policy,
-        );
-      } catch (error) {
-        context.onError(error, controller);
-      }
-    }
+    navigationLocked = false;
+    pageInactive = false;
+    applyPolicy(latestRawPolicy ?? context.policy);
   }
 
   browserWindow?.addEventListener('pagehide', () => applyPageInactive('pagehide'), {

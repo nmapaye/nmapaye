@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import {
   classifyNavigation,
@@ -14,6 +15,59 @@ const ordinary = {
   altKey: false,
   defaultPrevented: false,
 };
+
+function exactSourceRule(css, selector) {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return css.match(new RegExp(`(?:^|})\\s*${escaped}\\s*\\{([^}]*)\\}`, 'm'))?.[1] ?? null;
+}
+
+function atRuleBlock(css, header) {
+  const start = css.indexOf(header);
+  if (start === -1) return null;
+  const open = css.indexOf('{', start + header.length);
+  let depth = 1;
+  for (let index = open + 1; index < css.length; index += 1) {
+    if (css[index] === '{') depth += 1;
+    if (css[index] === '}') depth -= 1;
+    if (depth === 0) return css.slice(open + 1, index);
+  }
+  return null;
+}
+
+test('source wipe markup and styles define one exact accessible three-panel sequence', async () => {
+  const [markup, css] = await Promise.all([
+    readFile(new URL('../src/components/effects/MotionLayer.astro', import.meta.url), 'utf8'),
+    readFile(new URL('../src/styles/motion.css', import.meta.url), 'utf8'),
+  ]);
+  assert.equal((markup.match(/data-motion-wipe-panel=/g) ?? []).length, 3);
+  assert.deepEqual(
+    [...markup.matchAll(/data-motion-wipe-panel="([^"]+)"/g)].map((match) => match[1]),
+    ['red', 'yellow', 'green'],
+  );
+
+  const active = exactSourceRule(css, '.motion-wipe[data-active] [data-motion-wipe-panel]');
+  assert.ok(active);
+  assert.match(active, /transition:\s*transform 180ms steps\(4, end\)/);
+  const yellow = exactSourceRule(
+    css,
+    '.motion-wipe[data-active] [data-motion-wipe-panel="yellow"]',
+  );
+  const green = exactSourceRule(
+    css,
+    '.motion-wipe[data-active] [data-motion-wipe-panel="green"]',
+  );
+  assert.match(yellow ?? '', /transition-delay:\s*45ms/);
+  assert.match(green ?? '', /transition-delay:\s*90ms/);
+
+  const accessibility = atRuleBlock(
+    css,
+    '@media (forced-colors: active), (prefers-reduced-motion: reduce)',
+  );
+  assert.match(
+    accessibility ?? '',
+    /\[data-motion-blobs\],\s*\[data-motion-stickers\],\s*\[data-motion-particles\],\s*\[data-motion-wipe\]\s*\{\s*display:\s*none;/,
+  );
+});
 
 test('only ordinary same-origin HTML navigation is eligible', () => {
   for (const [href, destination] of [
@@ -139,12 +193,16 @@ test('the first activation owns the wipe and completion races navigate exactly o
     else if (finishingRace === 'complete') harness.controller.complete();
     else if (finishingRace === 'pagehide') harness.controller.pagehide();
     else if (finishingRace === 'destroy') harness.controller.destroy();
-    else harness.controller.fail(new Error('transition cancelled'));
+    else assert.equal(
+      harness.controller.fail(new Error('transition cancelled')),
+      true,
+    );
 
     harness.scheduled[0].callback();
     harness.controller.complete();
     harness.controller.pagehide();
     harness.controller.destroy();
+    assert.equal(harness.controller.fail(new Error('stale failure')), false);
     assert.deepEqual(harness.destinations, ['https://nmapaye.com/writing/']);
     assert.deepEqual(harness.controller.snapshot(), {
       pending: null,
@@ -297,4 +355,86 @@ test('the delegated adapter prevents every eligible locked click but retains the
   panels.at(-1).dispatch('transitionend', { propertyName: 'transform' });
   controller.destroy();
   assert.deepEqual(destinations, ['https://nmapaye.com/writing/']);
+});
+
+function createAdapterCancellationHarness() {
+  const document = new FakeTarget();
+  const browserWindow = new FakeTarget();
+  const scheduled = [];
+  const destinations = [];
+  const errors = [];
+  browserWindow.location = {
+    href: 'https://nmapaye.com/',
+    assign(destination) { destinations.push(destination); },
+  };
+  browserWindow.setTimeout = (callback, delay) => {
+    scheduled.push({ callback, delay });
+    return scheduled.length;
+  };
+  browserWindow.clearTimeout = () => {};
+  document.defaultView = browserWindow;
+  const layer = new FakeTarget();
+  const panels = Array.from({ length: 3 }, () => new FakeTarget());
+  const root = {
+    ownerDocument: document,
+    querySelector(selector) {
+      return selector === '[data-motion-wipe]' ? layer : null;
+    },
+    querySelectorAll(selector) {
+      return selector === '[data-motion-wipe-panel]' ? panels : [];
+    },
+  };
+  const controller = mountNavigationWipe({
+    root,
+    signal: new AbortController().signal,
+    coordinator: { preempt() {}, release() {} },
+    lockForNavigation() { return () => {}; },
+    policy: { motionAllowed: true, forcedColors: false },
+    onError(error) { errors.push(error); },
+  });
+  const anchor = new FakeTarget();
+  anchor.setAttribute('href', '/writing/');
+  anchor.closest = (selector) => selector === 'a[href]' ? anchor : null;
+  document.dispatch('click', {
+    ...ordinary,
+    target: anchor,
+    preventDefault() {},
+  });
+  return {
+    browserWindow,
+    controller,
+    destinations,
+    errors,
+    panels,
+    scheduled,
+  };
+}
+
+test('transition cancellation reports only while it consumes a pending navigation', () => {
+  const active = createAdapterCancellationHarness();
+  active.panels[0].dispatch('transitioncancel', {});
+  assert.deepEqual(active.destinations, ['https://nmapaye.com/writing/']);
+  assert.equal(active.errors.length, 1);
+  active.panels[1].dispatch('transitioncancel', {});
+  active.panels[2].dispatch('transitioncancel', {});
+  assert.equal(active.errors.length, 1);
+
+  for (const settlement of ['timeout', 'complete', 'reduced', 'pagehide']) {
+    const harness = createAdapterCancellationHarness();
+    if (settlement === 'timeout') harness.scheduled[0].callback();
+    else if (settlement === 'complete') {
+      harness.panels.at(-1).dispatch('transitionend', { propertyName: 'transform' });
+    } else if (settlement === 'reduced') {
+      harness.controller.setPolicy({ motionAllowed: false, forcedColors: false });
+    } else {
+      harness.browserWindow.dispatch('pagehide', {});
+    }
+    for (const panel of harness.panels) panel.dispatch('transitioncancel', {});
+    assert.deepEqual(
+      harness.destinations,
+      ['https://nmapaye.com/writing/'],
+      `${settlement} navigates once`,
+    );
+    assert.deepEqual(harness.errors, [], `${settlement} ignores stale cancellations`);
+  }
 });

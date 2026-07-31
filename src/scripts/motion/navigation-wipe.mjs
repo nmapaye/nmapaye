@@ -99,8 +99,9 @@ export function createNavigationWipeController({
   }
 
   function fail(error) {
-    finish();
-    if (error) onError(error);
+    const consumed = finish();
+    if (consumed && error) onError(error);
+    return consumed;
   }
 
   return {
