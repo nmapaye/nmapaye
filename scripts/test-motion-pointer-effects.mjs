@@ -195,6 +195,10 @@ function activateShowcasePointerEffects(harness) {
   harness.controller.update(70);
 }
 
+function firstActiveSticker(harness) {
+  return harness.stickers.find((node) => node.attrs.has('data-active'));
+}
+
 test('stickers require both 60 pixels and 60 milliseconds', () => {
   const previous = { x: 0, y: 0, timestamp: 0 };
   assert.equal(
@@ -288,7 +292,7 @@ test('offscreen motion zones ignore pointer movement without scheduling a frame'
   assert.equal(harness.blobs.some((node) => node.attrs.has('data-active')), false);
 });
 
-test('an active offscreen zone clears pointer effects and cancels its scheduler client', () => {
+test('an active offscreen zone hides blobs and short-exits its sticker trail', () => {
   const harness = createPointerHarness();
   harness.dispatch('pointermove', {
     target: harness.showcase,
@@ -309,9 +313,140 @@ test('an active offscreen zone clears pointer effects and cancels its scheduler 
 
   harness.observer.emit([{ target: harness.showcase, isIntersecting: false }]);
 
-  assert.equal(harness.requested.size, 0);
   assert.equal(harness.blobs.some((node) => node.attrs.has('data-active')), false);
+  assert.equal(harness.stickers.some((node) => node.attrs.has('data-active')), true);
+  harness.controller.update(149);
+  assert.equal(harness.stickers.some((node) => node.attrs.has('data-active')), true);
+  harness.controller.update(150);
   assert.equal(harness.stickers.some((node) => node.attrs.has('data-active')), false);
+  assert.equal(harness.stickers.every((node) => node.style.opacity === ''), true);
+});
+
+test('natural sticker expiry clears renderer-owned inline styles', () => {
+  const harness = createPointerHarness();
+  activateShowcasePointerEffects(harness);
+  const sticker = firstActiveSticker(harness);
+  assert.ok(sticker);
+  assert.notEqual(sticker.style.opacity, '');
+
+  harness.controller.update(900);
+
+  assert.equal(sticker.attrs.has('data-active'), false);
+  assert.equal(sticker.style.opacity, '');
+  assert.equal(sticker.style.values.size, 0);
+});
+
+test('pointer exit fades stickers from their current opacity for exactly 150ms', () => {
+  let clock = 0;
+  const harness = createPointerHarness({ clock: () => clock });
+  activateShowcasePointerEffects(harness);
+  const sticker = firstActiveSticker(harness);
+  assert.ok(sticker);
+
+  clock = 450;
+  harness.controller.update(450);
+  const opacityAtExit = Number(sticker.style.opacity);
+  harness.dispatch('pointerout', {
+    target: harness.showcase,
+    relatedTarget: null,
+  });
+
+  clock = 525;
+  harness.controller.update(525);
+  assert.ok(Math.abs(Number(sticker.style.opacity) - opacityAtExit / 2) < 0.001);
+
+  harness.dispatch('pointerout', {
+    target: harness.showcase,
+    relatedTarget: null,
+  });
+  clock = 599;
+  harness.controller.update(599);
+  assert.equal(sticker.attrs.has('data-active'), true);
+
+  clock = 600;
+  harness.controller.update(600);
+  assert.equal(sticker.attrs.has('data-active'), false);
+  assert.equal(sticker.style.opacity, '');
+  assert.equal(sticker.style.values.size, 0);
+});
+
+test('scroll begins the short sticker exit even with IntersectionObserver', () => {
+  let clock = 0;
+  const harness = createPointerHarness({ clock: () => clock });
+  activateShowcasePointerEffects(harness);
+  const sticker = firstActiveSticker(harness);
+  assert.ok(sticker);
+
+  clock = 100;
+  harness.triggerWindow('scroll');
+  clock = 249;
+  harness.controller.update(249);
+  assert.equal(sticker.attrs.has('data-active'), true);
+
+  clock = 250;
+  harness.controller.update(250);
+  assert.equal(sticker.attrs.has('data-active'), false);
+  assert.equal(sticker.style.opacity, '');
+});
+
+test('moving from Work to Hero retires the existing sticker trail', () => {
+  let clock = 0;
+  const harness = createPointerHarness({ clock: () => clock });
+  activateShowcasePointerEffects(harness);
+  const sticker = firstActiveSticker(harness);
+  assert.ok(sticker);
+
+  clock = 100;
+  harness.dispatch('pointermove', {
+    target: harness.hero,
+    clientX: 100,
+    clientY: 100,
+    timeStamp: 100,
+  });
+  clock = 250;
+  harness.controller.update(250);
+
+  assert.equal(sticker.attrs.has('data-active'), false);
+  assert.equal(sticker.style.opacity, '');
+});
+
+test('pointerout followed by offscreen notification cannot strand sticker styles', () => {
+  let clock = 0;
+  const harness = createPointerHarness({ clock: () => clock });
+  activateShowcasePointerEffects(harness);
+  const sticker = firstActiveSticker(harness);
+  assert.ok(sticker);
+
+  clock = 100;
+  harness.dispatch('pointerout', {
+    target: harness.showcase,
+    relatedTarget: null,
+  });
+  harness.observer.emit([{ target: harness.showcase, isIntersecting: false }]);
+  clock = 250;
+  harness.controller.update(250);
+
+  assert.equal(sticker.attrs.has('data-active'), false);
+  assert.equal(sticker.style.opacity, '');
+  assert.equal(sticker.style.values.size, 0);
+});
+
+test('policy cleanup removes sticker attributes and renderer-owned styles immediately', () => {
+  const harness = createPointerHarness();
+  activateShowcasePointerEffects(harness);
+  const sticker = firstActiveSticker(harness);
+  assert.ok(sticker);
+
+  harness.controller.setPolicy({
+    motionAllowed: false,
+    finePointerEffects: false,
+    forcedColors: false,
+    hidden: false,
+  });
+
+  assert.equal(sticker.attrs.has('data-active'), false);
+  assert.equal(sticker.style.opacity, '');
+  assert.equal(sticker.style.values.size, 0);
 });
 
 test('fallback scroll clears active pointer effects when their zone leaves the viewport', () => {
@@ -324,9 +459,11 @@ test('fallback scroll clears active pointer effects when their zone leaves the v
   harness.showcase.rect = { left: 0, top: 800, width: 100, height: 100 };
   harness.triggerWindow('scroll');
 
-  assert.equal(harness.requested.size, 0);
   assert.equal(harness.blobs.some((node) => node.attrs.has('data-active')), false);
+  assert.equal(harness.stickers.some((node) => node.attrs.has('data-active')), true);
+  harness.controller.update(150);
   assert.equal(harness.stickers.some((node) => node.attrs.has('data-active')), false);
+  assert.equal(harness.stickers.every((node) => node.style.opacity === ''), true);
 });
 
 test('fallback scroll clears active pointer effects when their zone leaves horizontally', () => {
@@ -337,7 +474,9 @@ test('fallback scroll clears active pointer effects when their zone leaves horiz
   harness.showcase.rect = { left: 1400, top: 0, width: 100, height: 100 };
   harness.triggerWindow('scroll');
 
-  assert.equal(harness.requested.size, 0);
+  assert.equal(harness.stickers.some((node) => node.attrs.has('data-active')), true);
+  harness.controller.update(150);
+  assert.equal(harness.stickers.some((node) => node.attrs.has('data-active')), false);
   assert.equal(harness.blobs.some((node) => node.attrs.has('data-active')), false);
   assert.equal(harness.stickers.some((node) => node.attrs.has('data-active')), false);
 });
@@ -351,8 +490,9 @@ test('fallback resize clears active pointer effects when their zone leaves the v
   harness.browserWindow.innerHeight = 600;
   harness.triggerWindow('resize');
 
-  assert.equal(harness.requested.size, 0);
   assert.equal(harness.blobs.some((node) => node.attrs.has('data-active')), false);
+  assert.equal(harness.stickers.some((node) => node.attrs.has('data-active')), true);
+  harness.controller.update(150);
   assert.equal(harness.stickers.some((node) => node.attrs.has('data-active')), false);
 });
 

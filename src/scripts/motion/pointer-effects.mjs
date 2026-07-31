@@ -1,5 +1,8 @@
 export const BURST_SYMBOLS = ['✦', '◆', '⚡', '↗', '01', '02', '03', '04'];
 
+const STICKER_LIFETIME = 900;
+const STICKER_EXIT_DURATION = 150;
+
 export function shouldSpawnSticker(previous, next, limits) {
   if (!previous) return false;
   return (
@@ -41,6 +44,11 @@ export function createBurst({ seed, triggerCount, limit, lifetime }) {
   }));
 }
 
+function resetStickerNode(node) {
+  node.removeAttribute('data-active');
+  node.removeAttribute('style');
+}
+
 export function mountPointerEffects(context) {
   const stickerNodes = [...context.root.querySelectorAll('[data-motion-sticker]')];
   const particleNodes = [...context.root.querySelectorAll('[data-motion-particle]')];
@@ -48,6 +56,7 @@ export function mountPointerEffects(context) {
   const zones = [...context.root.ownerDocument.querySelectorAll(
     '[data-motion-hero], [data-motion-showcase]',
   )];
+  const browserWindow = context.window ?? context.root.ownerDocument.defaultView;
   const visibleZones = new Map(zones.map((zone) => [zone, true]));
   const listenerAbortController = new AbortController();
   const abortPointerListeners = () => listenerAbortController.abort();
@@ -82,7 +91,7 @@ export function mountPointerEffects(context) {
     state.stickers = [];
     state.lastSticker = null;
     state.stickerZone = null;
-    hide(stickerNodes);
+    for (const node of stickerNodes) resetStickerNode(node);
   };
   const cancelBurst = () => {
     const owner = state.burstOwner;
@@ -102,6 +111,26 @@ export function mountPointerEffects(context) {
     state.running = true;
     context.scheduler.request(controller);
   };
+  const beginStickerExit = () => {
+    if (state.stickers.length === 0) return;
+    const timestamp = context.scheduler.now(context.clock());
+    let changed = false;
+    state.stickers = state.stickers.map((item) => {
+      if (item.exitingAt !== undefined) return item;
+      changed = true;
+      return {
+        ...item,
+        exitingAt: timestamp,
+        exitOpacity: Math.max(
+          0,
+          1 - (timestamp - item.startedAt) / STICKER_LIFETIME,
+        ),
+      };
+    });
+    state.lastSticker = null;
+    state.stickerZone = null;
+    if (changed) request();
+  };
 
   const controller = {
     update(timestamp) {
@@ -111,8 +140,11 @@ export function mountPointerEffects(context) {
         clearPointer();
         clearStickers();
       }
-      state.stickers = state.stickers
-        .filter((item) => timestamp - item.startedAt < 900);
+      state.stickers = state.stickers.filter((item) => (
+        item.exitingAt === undefined
+          ? timestamp - item.startedAt < STICKER_LIFETIME
+          : timestamp - item.exitingAt < STICKER_EXIT_DURATION
+      ));
       state.particles = state.particles
         .filter((item) => timestamp - item.startedAt < item.duration);
       if (state.particles.length === 0 && state.burstOwner) cancelBurst();
@@ -155,13 +187,27 @@ export function mountPointerEffects(context) {
       });
       stickerNodes.forEach((node, index) => {
         const item = state.stickers.find((entry) => entry.index === index);
-        node.toggleAttribute('data-active', Boolean(item));
-        if (!item) return;
-        const progress = Math.max(0, Math.min(1, (timestamp - item.startedAt) / 900));
+        if (!item) {
+          resetStickerNode(node);
+          return;
+        }
+        node.toggleAttribute('data-active', true);
+        const progress = Math.max(
+          0,
+          Math.min(1, (timestamp - item.startedAt) / STICKER_LIFETIME),
+        );
         node.style.setProperty('--sticker-x', `${item.x}px`);
         node.style.setProperty('--sticker-y', `${item.y + progress * 72}px`);
         node.style.setProperty('--sticker-rotate', `${item.rotation}deg`);
-        node.style.opacity = String(Math.max(0, 1 - progress));
+        if (item.exitingAt === undefined) {
+          node.style.opacity = String(Math.max(0, 1 - progress));
+          return;
+        }
+        const exitProgress = Math.max(
+          0,
+          Math.min(1, (timestamp - item.exitingAt) / STICKER_EXIT_DURATION),
+        );
+        node.style.opacity = String(item.exitOpacity * (1 - exitProgress));
       });
       particleNodes.forEach((node, index) => {
         const item = state.particles[index];
@@ -224,21 +270,23 @@ export function mountPointerEffects(context) {
   function applyZoneVisibility(zone, nextVisible) {
     if (!visibleZones.has(zone)) return;
     visibleZones.set(zone, nextVisible);
-    if (!nextVisible && state.pointerZone === zone) {
-      clearPointer();
-      clearStickers();
+    if (!nextVisible) {
+      const ownsPointer = state.pointerZone === zone;
+      const ownsStickerTrail = state.stickerZone === zone;
+      if (ownsPointer) clearPointer();
+      if (ownsPointer || ownsStickerTrail) beginStickerExit();
       stopIfIdle();
     }
   }
 
+  let refreshFallbackVisibility = null;
   const observer = context.observerFactory?.((entries) => {
     for (const entry of entries) applyZoneVisibility(entry.target, entry.isIntersecting);
   }, { threshold: 0 });
   if (observer) {
     for (const zone of zones) observer.observe(zone);
   } else {
-    const browserWindow = context.window ?? context.root.ownerDocument.defaultView;
-    const refreshFallbackVisibility = () => {
+    refreshFallbackVisibility = () => {
       for (const zone of zones) {
         const rect = zone.getBoundingClientRect();
         applyZoneVisibility(
@@ -251,22 +299,32 @@ export function mountPointerEffects(context) {
       }
     };
     refreshFallbackVisibility();
-    browserWindow?.addEventListener('scroll', refreshFallbackVisibility, {
-      signal: listenerAbortController.signal,
-      passive: true,
-    });
     browserWindow?.addEventListener('resize', refreshFallbackVisibility, {
       signal: listenerAbortController.signal,
       passive: true,
     });
   }
 
+  browserWindow?.addEventListener('scroll', () => {
+    beginStickerExit();
+    refreshFallbackVisibility?.();
+  }, {
+    signal: listenerAbortController.signal,
+    passive: true,
+  });
+
   function handlePointerMove(event) {
     const samples = event.getCoalescedEvents?.() || [event];
     const zone = event.target.closest?.('[data-motion-hero], [data-motion-showcase]');
-    if (!zone || !visibleZones.get(zone) || !context.policy.finePointerEffects) {
+    if (!context.policy.finePointerEffects) {
       clearPointer();
       clearStickers();
+      stopIfIdle();
+      return;
+    }
+    if (!zone || !visibleZones.get(zone)) {
+      clearPointer();
+      beginStickerExit();
       stopIfIdle();
       return;
     }
@@ -280,8 +338,7 @@ export function mountPointerEffects(context) {
       state.pointer = { x: sample.clientX, y: sample.clientY };
       state.pointerZone = zone;
       if (!zone.matches('[data-motion-showcase]')) {
-        state.lastSticker = null;
-        state.stickerZone = null;
+        beginStickerExit();
         continue;
       }
       const nextSticker = {
@@ -324,6 +381,7 @@ export function mountPointerEffects(context) {
     );
     if (zone && zone === nextZone) return;
     clearPointer();
+    beginStickerExit();
     if (state.stickers.length || state.particles.length) request();
     else stopIfIdle();
   }
