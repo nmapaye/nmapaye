@@ -378,3 +378,25 @@
     opacity: 1;
   }
 }
+
+@media (max-width: 639px) {
+  .card-stack[data-expanded] [data-motion-card-layer="0"] {
+    --stack-x: -4%;
+    --stack-flat-x: -4%;
+    --stack-rotate: -2deg;
+  }
+
+  .card-stack[data-expanded] [data-motion-card-layer="2"] {
+    --stack-x: 4%;
+    --stack-flat-x: 4%;
+    --stack-rotate: 2deg;
+  }
+
+  .card-stack [data-motion-card-layer="0"] {
+    --stack-static-x: -4%;
+  }
+
+  .card-stack [data-motion-card-layer="2"] {
+    --stack-static-x: 4%;
+  }
+}

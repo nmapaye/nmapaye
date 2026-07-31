@@ -321,6 +321,60 @@ test('project cards keep their existing semantic content while exposing four dec
   assert.match(html, /DMA sampling with prioritized FreeRTOS tasks/);
 });
 
+test('narrow card stacks keep a visible fan inside the mobile gutter', async () => {
+  const [authoredCss, builtCss] = await Promise.all([
+    readSource('src/styles/motion.css'),
+    readBuiltCss(),
+  ]);
+  const selectors = {
+    leftExpanded: /^\.card-stack\[data-expanded\] \[data-motion-card-layer="0"\]$/,
+    rightExpanded: /^\.card-stack\[data-expanded\] \[data-motion-card-layer="2"\]$/,
+    leftStatic: /^\.card-stack \[data-motion-card-layer="0"\]$/,
+    rightStatic: /^\.card-stack \[data-motion-card-layer="2"\]$/,
+  };
+  const readNumber = (rule, property, unit) => {
+    const value = rule?.match(new RegExp(`--${property}:\\s*(-?[\\d.]+)${unit}`))?.[1];
+    assert.notEqual(value, undefined, `missing --${property}`);
+    return Number(value);
+  };
+
+  for (const [label, css] of [['authored', authoredCss], ['built', builtCss]]) {
+    const mobileCss = extractMaxWidthMediaBlocks(css, 639).join('\n');
+    const leftExpanded = findExactCssRule(mobileCss, selectors.leftExpanded);
+    const rightExpanded = findExactCssRule(mobileCss, selectors.rightExpanded);
+    const leftStatic = findExactCssRule(mobileCss, selectors.leftStatic);
+    const rightStatic = findExactCssRule(mobileCss, selectors.rightStatic);
+
+    assert.ok(leftExpanded, `${label} CSS is missing the left mobile fan rule`);
+    assert.ok(rightExpanded, `${label} CSS is missing the right mobile fan rule`);
+    assert.ok(leftStatic, `${label} CSS is missing the left static mobile fan rule`);
+    assert.ok(rightStatic, `${label} CSS is missing the right static mobile fan rule`);
+
+    const pairs = [
+      ['stack-x', readNumber(leftExpanded, 'stack-x', '%'), readNumber(rightExpanded, 'stack-x', '%'), 4],
+      ['stack-rotate', readNumber(leftExpanded, 'stack-rotate', 'deg'), readNumber(rightExpanded, 'stack-rotate', 'deg'), 2],
+      ['stack-flat-x', readNumber(leftExpanded, 'stack-flat-x', '%'), readNumber(rightExpanded, 'stack-flat-x', '%'), 4],
+      ['stack-static-x', readNumber(leftStatic, 'stack-static-x', '%'), readNumber(rightStatic, 'stack-static-x', '%'), 4],
+    ];
+
+    for (const [property, left, right, safeMaximum] of pairs) {
+      assert.ok(left < 0 && right > 0, `${label} --${property} keeps both fan directions visible`);
+      assert.equal(Math.abs(left), Math.abs(right), `${label} --${property} stays symmetric`);
+      assert.ok(
+        Math.abs(left) <= safeMaximum,
+        `${label} --${property} stays within the ${safeMaximum}-unit mobile bound`,
+      );
+    }
+  }
+
+  const desktopLeft = findExactCssRule(authoredCss, selectors.leftExpanded);
+  const desktopRight = findExactCssRule(authoredCss, selectors.rightExpanded);
+  assert.equal(readNumber(desktopLeft, 'stack-x', '%'), -12);
+  assert.equal(readNumber(desktopRight, 'stack-x', '%'), 12);
+  assert.equal(readNumber(desktopLeft, 'stack-rotate', 'deg'), -5);
+  assert.equal(readNumber(desktopRight, 'stack-rotate', 'deg'), 5);
+});
+
 test('text motion retains eight semantic labels behind hidden visual overlays', async () => {
   const html = await readHomepage();
 
