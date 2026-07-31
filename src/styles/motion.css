@@ -209,7 +209,7 @@
 }
 
 .kinetic-marquee:not([data-motion-enhanced]) .kinetic-marquee__track {
-  display: none;
+  visibility: hidden;
 }
 
 .kinetic-marquee[data-motion-enhanced] .kinetic-marquee__source {

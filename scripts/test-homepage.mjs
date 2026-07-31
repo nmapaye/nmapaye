@@ -168,6 +168,30 @@ test('hero marquee keeps one semantic source and hidden visual tracks', async ()
   assert.equal((marquee.match(/aria-hidden="true"/g) ?? []).length, 2);
 });
 
+test('marquee fallback keeps duplicate tracks hidden yet measurable before enhancement', async () => {
+  const [sourceCss, builtCss, html] = await Promise.all([
+    readSource('src/styles/motion.css'),
+    readBuiltCss(),
+    readHomepage(),
+  ]);
+  const selector = /^\.kinetic-marquee:not\(\[data-motion-enhanced\]\) \.kinetic-marquee__track$/;
+  for (const css of [sourceCss, builtCss]) {
+    const rule = findExactCssRule(css, selector);
+    assert.ok(rule, 'pre-enhancement marquee track rule is present');
+    assert.match(rule, /visibility\s*:\s*hidden/);
+    assert.doesNotMatch(rule, /display\s*:\s*none/);
+  }
+  const sourceRule = findExactCssRule(
+    builtCss,
+    /^\.kinetic-marquee\[data-motion-enhanced\] \.kinetic-marquee__source$/,
+  );
+  assert.match(sourceRule ?? '', /clip-path\s*:\s*inset\(50%\)/);
+  assert.match(
+    html,
+    /kinetic-marquee__source[^>]*>SYSTEMS \/ SECURITY \/ PRODUCT/,
+  );
+});
+
 test('motion markup uses fixed decorative pools and canonical poster assets', async () => {
   const html = await readHomepage();
   const posterPaths = [

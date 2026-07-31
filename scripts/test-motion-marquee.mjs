@@ -39,6 +39,103 @@ test('marquee position remains inside one repeated-track span', () => {
   assert.ok(state.position >= 0 && state.position < 100);
 });
 
+test('marquee enhancement follows valid dimensions, observer, and scroll listener setup', () => {
+  const sequence = [];
+  const hero = {};
+  const tracks = [{ scrollWidth: 400 }, { scrollWidth: 400 }];
+  const element = {
+    attrs: new Map(),
+    style: {
+      setProperty() {},
+      removeProperty() {},
+    },
+    setAttribute(name, value = '') {
+      sequence.push(`attribute:${name}`);
+      this.attrs.set(name, value);
+    },
+    removeAttribute(name) { this.attrs.delete(name); },
+    closest(selector) { return selector === '[data-motion-hero]' ? hero : null; },
+    querySelectorAll(selector) {
+      return selector === '[data-motion-marquee-track]' ? tracks : [];
+    },
+  };
+  const browserWindow = {
+    scrollY: 0,
+    addEventListener(type) { sequence.push(`listener:${type}`); },
+  };
+  const context = {
+    root: {
+      ownerDocument: {
+        defaultView: browserWindow,
+        querySelector(selector) {
+          return selector === '[data-motion-marquee]' ? element : null;
+        },
+      },
+    },
+    clock: () => 10,
+    policy: { motionAllowed: true, forcedColors: false },
+    signal: new AbortController().signal,
+    scheduler: { request() {}, cancel() {} },
+    observerFactory() {
+      sequence.push('observer');
+      return { observe() {}, disconnect() {} };
+    },
+  };
+
+  const controller = mountMarquee(context);
+
+  assert.ok(controller);
+  assert.deepEqual(sequence, [
+    'observer',
+    'listener:scroll',
+    'attribute:data-motion-enhanced',
+  ]);
+});
+
+test('zero-width marquee remains an unenhanced semantic fallback', () => {
+  let observerCreated = false;
+  let listenerAdded = false;
+  const hero = {};
+  const tracks = [{ scrollWidth: 0 }, { scrollWidth: 0 }];
+  const element = {
+    attrs: new Map(),
+    style: { setProperty() {}, removeProperty() {} },
+    setAttribute(name, value = '') { this.attrs.set(name, value); },
+    removeAttribute(name) { this.attrs.delete(name); },
+    closest(selector) { return selector === '[data-motion-hero]' ? hero : null; },
+    querySelectorAll(selector) {
+      return selector === '[data-motion-marquee-track]' ? tracks : [];
+    },
+  };
+  const browserWindow = {
+    scrollY: 0,
+    addEventListener() { listenerAdded = true; },
+  };
+  const context = {
+    root: {
+      ownerDocument: {
+        defaultView: browserWindow,
+        querySelector(selector) {
+          return selector === '[data-motion-marquee]' ? element : null;
+        },
+      },
+    },
+    clock: () => 10,
+    policy: { motionAllowed: true, forcedColors: false },
+    signal: new AbortController().signal,
+    scheduler: { request() {}, cancel() {} },
+    observerFactory() {
+      observerCreated = true;
+      return { observe() {}, disconnect() {} };
+    },
+  };
+
+  assert.equal(mountMarquee(context), null);
+  assert.equal(element.attrs.has('data-motion-enhanced'), false);
+  assert.equal(observerCreated, false);
+  assert.equal(listenerAdded, false);
+});
+
 test('offscreen marquee ignores scroll, resumes onscreen, and cancels immediately', () => {
   const handlers = new Map();
   const requested = new Set();
