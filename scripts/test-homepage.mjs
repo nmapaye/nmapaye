@@ -165,25 +165,55 @@ test('text motion retains eight semantic labels behind hidden visual overlays', 
 
 test('text shuffle overlays share their semantic label typography and geometry', async () => {
   const css = await readBuiltCss();
-
-  assert.match(
-    css,
-    /\.glitch-text\{[^}]*position:relative[^}]*display:inline-block[^}]*\}/,
-  );
-  assert.match(
-    css,
-    /\.glitch-text__visual\{[^}]*inset:0[^}]*font:inherit[^}]*line-height:inherit[^}]*letter-spacing:inherit[^}]*text-transform:inherit[^}]*\}/,
-  );
-  assert.ok(
-    (css.match(/\.glitch-text[^{}]*>[^{}]*\{[^}]*display:block[^}]*margin:0[^}]*font:inherit[^}]*line-height:inherit[^}]*letter-spacing:inherit[^}]*text-transform:inherit[^}]*\}/g) ?? []).length >= 1,
-  );
-  for (const size of [
-    'clamp(4rem,10vw,8rem)',
-    'clamp(2.7rem,5vw,4.5rem)',
-    'clamp(1.2rem,3vw,2.4rem)',
-  ]) {
-    assert.match(css, new RegExp(`font:900 ${size.replace(/[()]/g, '\\$&')}`));
+  const rule = (selector) => {
+    const match = css.match(new RegExp(`${selector}\\{([^}]*)\\}`));
+    assert.ok(match, `missing compiled selector: ${selector}`);
+    return match[1];
+  };
+  const wrappers = [
+    {
+      selector: '\\.work-feature__copy\\[data-astro-cid-[^\\]]+\\] \\.glitch-text\\[data-astro-cid-[^\\]]+\\]',
+      declarations: [
+        'margin-block:1rem',
+        'font:900 clamp(4rem,10vw,8rem)/.82 var(--font-display)',
+        'letter-spacing:-.055em',
+        'text-transform:uppercase',
+        'overflow-wrap:anywhere',
+      ],
+    },
+    {
+      selector: '\\.project-card\\[data-astro-cid-[^\\]]+\\] \\.glitch-text\\[data-astro-cid-[^\\]]+\\]',
+      declarations: [
+        'font:900 clamp(2.7rem,5vw,4.5rem)/.85 var(--font-display)',
+        'letter-spacing:-.04em',
+        'text-transform:uppercase',
+      ],
+    },
+    {
+      selector: '\\.chapter-index\\[data-astro-cid-[^\\]]+\\] \\.glitch-text\\[data-astro-cid-[^\\]]+\\]',
+      declarations: ['font:900 clamp(1.2rem,3vw,2.4rem)/.9 var(--font-display)'],
+    },
+  ];
+  for (const { selector, declarations } of wrappers) {
+    const declarationsText = rule(selector);
+    for (const declaration of declarations) {
+      assert.ok(declarationsText.includes(declaration), `${selector} is missing ${declaration}`);
+    }
   }
+
+  const base = rule('\\.glitch-text');
+  assert.match(base, /position:relative/);
+  assert.match(base, /display:inline-block/);
+  const semantic = rule('\\.glitch-text>:not\\(\\[aria-hidden=true\\]\\)');
+  for (const declaration of [
+    'display:block', 'margin:0', 'font:inherit', 'line-height:inherit',
+    'letter-spacing:inherit', 'text-transform:inherit', 'overflow-wrap:inherit',
+  ]) assert.ok(semantic.includes(declaration), `semantic child is missing ${declaration}`);
+  const visual = rule('\\.glitch-text__visual');
+  for (const declaration of [
+    'position:absolute', 'inset:0', 'font:inherit', 'line-height:inherit',
+    'letter-spacing:inherit', 'text-transform:inherit', 'overflow-wrap:inherit',
+  ]) assert.ok(visual.includes(declaration), `visual overlay is missing ${declaration}`);
 });
 
 test('media block extraction scopes matching CSS and preserves quoted content', () => {
