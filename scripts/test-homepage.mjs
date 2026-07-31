@@ -87,6 +87,70 @@ export function extractMaxWidthMediaBlocks(css, maxWidth) {
   return blocks;
 }
 
+function splitSimpleSelectorList(prelude) {
+  const selectors = [];
+  let start = 0;
+  let bracketDepth = 0;
+  let parenthesisDepth = 0;
+  let quote = null;
+  for (let index = 0; index < prelude.length; index += 1) {
+    const character = prelude[index];
+    if (quote) {
+      if (character === '\\') index += 1;
+      else if (character === quote) quote = null;
+      continue;
+    }
+    if (character === '"' || character === "'") quote = character;
+    else if (character === '[') bracketDepth += 1;
+    else if (character === ']') bracketDepth -= 1;
+    else if (character === '(') parenthesisDepth += 1;
+    else if (character === ')') parenthesisDepth -= 1;
+    else if (character === ',' && bracketDepth === 0 && parenthesisDepth === 0) {
+      selectors.push(prelude.slice(start, index));
+      start = index + 1;
+    }
+  }
+  selectors.push(prelude.slice(start));
+  return selectors.map((selector) => selector.replace(/\s+/g, ' ').trim());
+}
+
+function collectCssRuleBlocks(css) {
+  const rules = [];
+  let start = 0;
+  while (start < css.length) {
+    const open = css.indexOf('{', start);
+    if (open === -1) break;
+    const prelude = css.slice(start, open).trim();
+    let depth = 1;
+    let cursor = open + 1;
+    let quote = null;
+    for (; cursor < css.length && depth > 0; cursor += 1) {
+      const character = css[cursor];
+      if (quote) {
+        if (character === '\\') cursor += 1;
+        else if (character === quote) quote = null;
+      } else if (character === '"' || character === "'") quote = character;
+      else if (character === '{') depth += 1;
+      else if (character === '}') depth -= 1;
+    }
+    if (depth !== 0) break;
+    const block = css.slice(open + 1, cursor - 1);
+    if (prelude.startsWith('@')) rules.push(...collectCssRuleBlocks(block));
+    else rules.push({ prelude, block });
+    start = cursor;
+  }
+  return rules;
+}
+
+function findExactCssRule(css, expectedSelector) {
+  for (const { prelude, block } of collectCssRuleBlocks(css)) {
+    if (splitSimpleSelectorList(prelude).some((selector) => expectedSelector.test(selector))) {
+      return block;
+    }
+  }
+  return null;
+}
+
 export function visibleText(html) {
   return html
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
@@ -163,12 +227,31 @@ test('text motion retains eight semantic labels behind hidden visual overlays', 
   }
 });
 
+test('exact CSS rule extraction accepts only a matching selector-list member', () => {
+  const expected = /^\.project-card\[data-astro-cid-[^\]]+\] \.glitch-text\[data-astro-cid-[^\]]+\]$/;
+  const exact = '.project-card[data-astro-cid-card] .glitch-text[data-astro-cid-card]{color:red}';
+
+  assert.equal(findExactCssRule(exact, expected), 'color:red');
+  assert.equal(
+    findExactCssRule('.unrelated,.project-card[data-astro-cid-card] .glitch-text[data-astro-cid-card]{color:red}', expected),
+    'color:red',
+  );
+  assert.equal(
+    findExactCssRule(`.unrelated ${exact}`, expected),
+    null,
+  );
+  assert.equal(
+    findExactCssRule(`${exact.replace('{', ' .suffix{')}`, expected),
+    null,
+  );
+});
+
 test('text shuffle overlays share their semantic label typography and geometry', async () => {
   const css = await readBuiltCss();
   const rule = (selector) => {
-    const match = css.match(new RegExp(`${selector}\\{([^}]*)\\}`));
-    assert.ok(match, `missing compiled selector: ${selector}`);
-    return match[1];
+    const block = findExactCssRule(css, new RegExp(`^${selector}$`));
+    assert.ok(block, `missing compiled selector: ${selector}`);
+    return block;
   };
   const wrappers = [
     {
