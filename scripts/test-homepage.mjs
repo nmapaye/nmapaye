@@ -96,6 +96,27 @@ export function visibleText(html) {
     .trim();
 }
 
+test('motion markup uses fixed decorative pools and canonical poster assets', async () => {
+  const html = await readHomepage();
+  const posterPaths = [
+    'public/images/project-posters/aurora.svg',
+    'public/images/project-posters/embnode.svg',
+    'public/images/project-posters/gitops.svg',
+    'public/images/project-posters/syslib.svg',
+  ];
+
+  await Promise.all(
+    posterPaths.map((path) => assert.doesNotReject(access(new URL(path, repoRoot)))),
+  );
+  assert.match(html, /data-motion-root/);
+  assert.equal((html.match(/data-motion-blob=/g) ?? []).length, 2);
+  assert.equal((html.match(/data-motion-sticker(?:\s|=)/g) ?? []).length, 24);
+  assert.equal((html.match(/data-motion-particle(?:\s|=)/g) ?? []).length, 8);
+  assert.equal((html.match(/data-motion-wipe-panel/g) ?? []).length, 3);
+  assert.match(html, /data-motion-root[^>]*aria-hidden="true"/);
+  assert.doesNotMatch(html, /data-motion-grid[^>]*tabindex="0"/);
+});
+
 test('media block extraction scopes matching CSS and preserves quoted content', () => {
   const css = `
     .out-of-media { content: "decoy"; }

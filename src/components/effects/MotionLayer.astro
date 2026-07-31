@@ -1,0 +1,43 @@
+---
+import { projects } from '../../data/site';
+import ProjectPoster from './ProjectPoster.astro';
+
+interface Props { kinetic?: boolean; }
+const { kinetic = false } = Astro.props;
+const stickers = Array.from({ length: 24 }, (_, index) => projects[index % projects.length]);
+---
+
+<div
+  class="motion-layer"
+  data-motion-root
+  data-motion-kinetic={kinetic ? 'true' : 'false'}
+  aria-hidden="true"
+>
+  <div class="motion-blobs" data-motion-blobs>
+    <span data-motion-blob="lead"></span>
+    <span data-motion-blob="trail"></span>
+  </div>
+  <div class="motion-particles" data-motion-particles>
+    {Array.from({ length: 8 }, (_, index) => <span data-motion-particle={index}></span>)}
+  </div>
+  <div class="motion-wipe" data-motion-wipe>
+    <span data-motion-wipe-panel="red"></span>
+    <span data-motion-wipe-panel="yellow"></span>
+    <span data-motion-wipe-panel="green"></span>
+  </div>
+  {kinetic && (
+    <div class="motion-stickers" data-motion-stickers>
+      {stickers.map((project, index) => (
+        <span data-motion-sticker={index}>
+          <ProjectPoster project={project} variant="sticker" />
+        </span>
+      ))}
+    </div>
+  )}
+</div>
+
+<script>
+  import { initializeMotion } from '../../scripts/motion/index.mjs';
+  const root = document.querySelector('[data-motion-root]');
+  if (root) initializeMotion(root);
+</script>

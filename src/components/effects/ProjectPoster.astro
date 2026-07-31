@@ -1,0 +1,32 @@
+---
+import type { Project } from '../../data/site';
+
+interface Props {
+  project: Project;
+  variant: 'sticker' | 'grid' | 'stack';
+  layer?: number;
+}
+
+const { project, variant, layer = 0 } = Astro.props;
+const slug = project.name.toLowerCase();
+const background = `/images/project-posters/${slug}.svg`;
+const detail = project.metrics?.[0]
+  ? `${project.metrics[0].value} / ${project.metrics[0].label}`
+  : project.facts[0];
+---
+
+<figure
+  class:list={['project-poster', `project-poster--${variant}`]}
+  data-motion-poster={project.index}
+  data-layer={layer}
+  aria-hidden="true"
+>
+  <img src={background} alt="" width="1200" height="1500" loading="lazy" />
+  <figcaption>
+    <span>{project.index}</span>
+    <strong>{project.name}</strong>
+    {project.period && <small>{project.period}</small>}
+    <small>{project.stack.slice(0, 3).join(' / ')}</small>
+    <small>{detail}</small>
+  </figcaption>
+</figure>

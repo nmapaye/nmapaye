@@ -2,13 +2,16 @@
 import '@fontsource-variable/space-grotesk/wght.css';
 import '../styles/tokens.css';
 import '../styles/global.css';
+import '../styles/motion.css';
 import { profile } from '../data/site';
+import MotionLayer from '../components/effects/MotionLayer.astro';
 
 interface Props {
   title?: string;
   description?: string;
   ogType?: 'website' | 'article';
   structuredData?: Record<string, unknown>;
+  kinetic?: boolean;
 }
 
 const {
@@ -16,6 +19,7 @@ const {
   description = profile.description,
   ogType = 'website',
   structuredData,
+  kinetic = false,
 } = Astro.props;
 
 const base = import.meta.env.BASE_URL;
@@ -68,5 +72,6 @@ const ogImageAlt = `${profile.name} — ${profile.title} portfolio`;
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
     <slot />
+    <MotionLayer kinetic={kinetic} />
   </body>
 </html>
