@@ -1,4 +1,6 @@
 ---
+import GlitchText from './effects/GlitchText.astro';
+
 const chapters = [
   { number: '01', label: 'Work', href: '#work' },
   { number: '02', label: 'Experience', href: '#experience' },
@@ -11,7 +13,10 @@ const chapters = [
   {chapters.map((chapter) => (
     <a href={chapter.href}>
       <span>{chapter.number} /</span>
-      <strong>{chapter.label}</strong>
+      <div class="glitch-text" data-motion-shuffle data-motion-shuffle-label={chapter.label}>
+        <strong>{chapter.label}</strong>
+        <GlitchText text={chapter.label} />
+      </div>
     </a>
   ))}
 </nav>

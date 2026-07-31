@@ -3,6 +3,7 @@ import { projects } from '../data/site';
 import ProjectCard from './ProjectCard.astro';
 import CardStack from './effects/CardStack.astro';
 import InfiniteProjectGrid from './effects/InfiniteProjectGrid.astro';
+import GlitchText from './effects/GlitchText.astro';
 const featured = projects.find((project) => project.featured);
 const secondary = projects.filter((project) => !project.featured);
 ---
@@ -10,7 +11,7 @@ const secondary = projects.filter((project) => !project.featured);
 <section id="work" class="chapter work" data-motion-showcase aria-labelledby="work-title">
   <header class="work__header">
     <p class="chapter__label">01 / Work</p>
-    <h2 id="work-title" class="display">Selected work</h2>
+    <h2 id="work-title" class="display" data-motion-shake>Selected work</h2>
   </header>
 
   <InfiniteProjectGrid />
@@ -20,7 +21,10 @@ const secondary = projects.filter((project) => !project.featured);
       <div class="work-feature__copy">
         <CardStack project={featured} />
         <p class="chapter__label">Featured / {featured.index}</p>
-        <h3 class="display">{featured.name}</h3>
+        <div class="glitch-text" data-motion-shuffle data-motion-shuffle-label={featured.name}>
+          <h3 class="display">{featured.name}</h3>
+          <GlitchText text={featured.name} />
+        </div>
         <p class="work-feature__tagline">{featured.tagline}</p>
         <p>{featured.description}</p>
         <ul>
@@ -28,7 +32,7 @@ const secondary = projects.filter((project) => !project.featured);
         </ul>
         {featured.links && (
           <div class="work-feature__links">
-            {featured.links.map((link) => <a class="btn" data-motion-burst href={link.href}>{link.label} ↗</a>)}
+            {featured.links.map((link) => <a class="btn" data-motion-burst data-motion-shake-related="work-title" href={link.href}>{link.label} ↗</a>)}
           </div>
         )}
       </div>

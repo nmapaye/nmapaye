@@ -9,13 +9,13 @@ const resume = `${base}/${profile.resume}`.replace(/\/+/g, '/');
 <section id="contact" class="chapter contact" aria-labelledby="contact-title">
   <div class="contact__copy">
     <p class="chapter__label">04 / Contact</p>
-    <h2 id="contact-title" class="display">Let’s build.</h2>
+    <h2 id="contact-title" class="display" data-motion-shake>Let’s build.</h2>
     <p>Open to internships and early-career software roles across systems, security, and product engineering.</p>
     <div class="contact__links">
-      <a class="btn btn--primary" data-motion-burst href={`mailto:${links.email}`}>Email</a>
-      <a class="btn" data-motion-burst href={resume}>Resume</a>
-      <a class="btn" data-motion-burst href={links.linkedin} rel="noopener">LinkedIn</a>
-      <a class="btn" data-motion-burst href={links.github} rel="noopener">GitHub</a>
+      <a class="btn btn--primary" data-motion-burst data-motion-shake-related="contact-title" href={`mailto:${links.email}`}>Email</a>
+      <a class="btn" data-motion-burst data-motion-shake-related="contact-title" href={resume}>Resume</a>
+      <a class="btn" data-motion-burst data-motion-shake-related="contact-title" href={links.linkedin} rel="noopener">LinkedIn</a>
+      <a class="btn" data-motion-burst data-motion-shake-related="contact-title" href={links.github} rel="noopener">GitHub</a>
     </div>
   </div>
   <div class="contact__portrait">

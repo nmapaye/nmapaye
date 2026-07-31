@@ -27,16 +27,16 @@ const formatDate = (date: Date) =>
   </div>
   <div class="notes__content">
     <p class="chapter__label">03 / Notes</p>
-    <h2 id="notes-title" class="display">Notes from<br />the underground</h2>
+    <h2 id="notes-title" class="display" data-motion-shake>Notes from<br />the underground</h2>
     {featured && (
       <article>
         <p class="chapter__label">{formatDate(featured.data.publishedDate)}</p>
-        <h3><a href={`/writing/${featured.slug}/`}>{featured.data.title}</a></h3>
+        <h3><a data-motion-shake-related="notes-title" href={`/writing/${featured.slug}/`}>{featured.data.title}</a></h3>
         <p>{featured.data.description}</p>
-        <a class="btn" href={`/writing/${featured.slug}/`}>Read the note</a>
+        <a class="btn" data-motion-shake-related="notes-title" href={`/writing/${featured.slug}/`}>Read the note</a>
       </article>
     )}
-    <a class="btn btn--primary" href="/writing/">All notes</a>
+    <a class="btn btn--primary" data-motion-shake-related="notes-title" href="/writing/">All notes</a>
   </div>
 </section>
 

@@ -147,6 +147,22 @@ test('project cards keep their existing semantic content while exposing four dec
   assert.match(html, /DMA sampling with prioritized FreeRTOS tasks/);
 });
 
+test('text motion retains eight semantic labels behind hidden visual overlays', async () => {
+  const html = await readHomepage();
+
+  assert.equal((html.match(/data-motion-shuffle(?:\s|=)/g) ?? []).length, 8);
+  assert.equal((html.match(/data-motion-shuffle-visual[^>]*aria-hidden="true"/g) ?? []).length, 8);
+  assert.equal((html.match(/data-motion-shake(?:\s|=)/g) ?? []).length, 5);
+  assert.match(html, /<strong[^>]*>Work<\/strong>/);
+  assert.match(html, /<h3[^>]*>AURORA<\/h3>/);
+  assert.match(html, /<h3[^>]*>EmbNode<\/h3>/);
+  assert.match(html, /<h3[^>]*>GitOps<\/h3>/);
+  assert.match(html, /<h3[^>]*>SysLib<\/h3>/);
+  for (const href of ['#work', '#experience', '#notes', '#contact']) {
+    assert.match(html, new RegExp(`href="${href}"`));
+  }
+});
+
 test('media block extraction scopes matching CSS and preserves quoted content', () => {
   const css = `
     .out-of-media { content: "decoy"; }

@@ -1,6 +1,7 @@
 ---
 import type { Project } from '../data/site';
 import CardStack from './effects/CardStack.astro';
+import GlitchText from './effects/GlitchText.astro';
 interface Props {
   project: Project;
 }
@@ -13,7 +14,10 @@ const { project } = Astro.props;
     <span>{project.index}</span>
     {project.period && <time>{project.period}</time>}
   </header>
-  <h3>{project.name}</h3>
+  <div class="glitch-text" data-motion-shuffle data-motion-shuffle-label={project.name}>
+    <h3>{project.name}</h3>
+    <GlitchText text={project.name} />
+  </div>
   <p class="project-card__tagline">{project.tagline}</p>
   <p>{project.description}</p>
   <ul class="project-card__facts">
@@ -25,7 +29,7 @@ const { project } = Astro.props;
   {project.links && (
     <div class="project-card__links">
       {project.links.map((link) => (
-        <a data-motion-burst href={link.href} rel={link.href.startsWith('http') ? 'noopener' : undefined}>
+        <a data-motion-burst data-motion-shake-related="work-title" href={link.href} rel={link.href.startsWith('http') ? 'noopener' : undefined}>
           {link.label} ↗
         </a>
       ))}

@@ -6,6 +6,7 @@ import { mountPointerEffects } from './pointer-effects.mjs';
 import { mountMarquee } from './marquee.mjs';
 import { mountGrid } from './grid.mjs';
 import { mountCardStacks } from './card-stack.mjs';
+import { mountTextEffects } from './text-effects.mjs';
 import { observeMotionPolicy } from './policy.mjs';
 
 const mounts = new WeakMap();
@@ -203,7 +204,7 @@ export function initializeMotion(root, environment = {}) {
     observedPolicy?.refresh?.bind(observedPolicy) ?? (() => context.policy);
   const controllerFactories = environment.controllerFactories ?? (
     root.getAttribute?.('data-motion-kinetic') === 'true'
-      ? [mountPointerEffects, mountMarquee, mountGrid, mountCardStacks]
+      ? [mountPointerEffects, mountTextEffects, mountMarquee, mountGrid, mountCardStacks]
       : []
   );
   for (const factory of controllerFactories) {
