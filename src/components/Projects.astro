@@ -76,9 +76,12 @@ const secondary = projects.filter((project) => !project.featured);
     border-right: var(--rule);
   }
 
-  .work-feature__copy h3 {
+  .work-feature__copy .glitch-text {
     margin-block: 1rem;
-    font-size: clamp(4rem, 10vw, 8rem);
+    font: 900 clamp(4rem, 10vw, 8rem)/0.82 var(--font-display);
+    letter-spacing: -0.055em;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
   }
 
   .work-feature__metrics {

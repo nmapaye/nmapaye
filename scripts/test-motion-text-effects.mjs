@@ -8,10 +8,14 @@ import {
 import { createInteractionCoordinator } from '../src/scripts/motion/index.mjs';
 
 test('shake stays within 250ms, two pixels, and three oscillations', () => {
-  const samples = [0, 50, 100, 150, 200, 250].map((elapsed) =>
+  const samples = [0, 42, 84, 125, 167, 209, 250].map((elapsed) =>
     shakeFrame(elapsed, { duration: 250, amplitude: 2, oscillations: 3 }),
   );
   assert.ok(samples.slice(0, -1).every(({ x, y }) => Math.abs(x) <= 2 && Math.abs(y) <= 2));
+  assert.deepEqual(
+    samples.slice(0, -1).map(({ x, y }) => [x, y]),
+    [[2, -2], [-2, 2], [2, -2], [-2, 2], [2, -2], [-2, 2]],
+  );
   assert.deepEqual(samples.at(-1), { x: 0, y: 0, done: true });
 });
 
@@ -197,12 +201,13 @@ test('standalone shake and shuffle measure their deadlines from the event', () =
 });
 
 test('policy, hidden state, destroy, and grid preemption restore text exactly and cancel the batched client', () => {
-  for (const ending of ['policy', 'hidden', 'destroy', 'grid']) {
+  for (const ending of ['policy', 'forced-colors', 'hidden', 'destroy', 'grid']) {
     const harness = createHarness();
     harness.setNow(0);
     trigger(harness, harness.heroTitle);
     assert.equal(harness.requested.size, 1);
     if (ending === 'policy') harness.controller.setPolicy({ motionAllowed: false, forcedColors: false });
+    else if (ending === 'forced-colors') harness.controller.setPolicy({ motionAllowed: true, forcedColors: true });
     else if (ending === 'hidden') harness.controller.setPolicy({ motionAllowed: true, forcedColors: false, hidden: true });
     else if (ending === 'destroy') harness.controller.destroy();
     else harness.context.coordinator.claim('grid', 2);
@@ -219,6 +224,14 @@ test('policy, hidden state, destroy, and grid preemption restore text exactly an
   assert.equal(shuffle.projectVisual.textContent, 'AURORA');
   assert.equal(shuffle.projectText.textContent, 'AURORA');
   assert.equal(shuffle.requested.size, 0);
+
+  const forcedShuffle = createHarness();
+  trigger(forcedShuffle, forcedShuffle.project);
+  forcedShuffle.controller.setPolicy({ motionAllowed: true, forcedColors: true });
+  assert.equal(forcedShuffle.projectVisual.textContent, 'AURORA');
+  assert.equal(forcedShuffle.projectText.textContent, 'AURORA');
+  assert.equal(forcedShuffle.project.getAttribute('data-active'), null);
+  assert.equal(forcedShuffle.requested.size, 0);
 });
 
 test('burst follow-ups use the original activation time and stale hidden work stays idle', () => {
@@ -239,6 +252,21 @@ test('burst follow-ups use the original activation time and stale hidden work st
   harness.intersectionObserver.emit([{ target: harness.work, isIntersecting: true }]);
   assert.equal(harness.requested.size, 0);
   assert.equal(harness.project.getAttribute('data-active'), null);
+});
+
+test('navigation preemption discards a queued burst follow-up before it can mutate text', () => {
+  const harness = createHarness();
+  harness.setNow(0);
+  assert.equal(harness.context.coordinator.claim('link:#aurora', 1), true);
+  trigger(harness, harness.projectLink);
+  assert.equal(harness.requested.size, 0);
+  harness.context.coordinator.claim('navigation', 3);
+  harness.context.coordinator.release('link:#aurora');
+  assert.equal(harness.project.getAttribute('data-active'), null);
+  assert.equal(harness.projectText.textContent, 'AURORA');
+  assert.equal(harness.projectVisual.textContent, 'AURORA');
+  assert.equal(harness.project.style.values.size, 0);
+  assert.equal(harness.requested.size, 0);
 });
 
 test('offscreen observer and fallback cancellation resolve Chapter Index entries to nav', () => {

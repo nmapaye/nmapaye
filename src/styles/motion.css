@@ -19,11 +19,26 @@
   display: inline-block;
 }
 
+.glitch-text > :not([aria-hidden="true"]) {
+  display: block;
+  margin: 0;
+  font: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  overflow-wrap: inherit;
+}
+
 .glitch-text__visual {
   position: absolute;
   inset: 0;
   opacity: 0;
   pointer-events: none;
+  font: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  overflow-wrap: inherit;
 }
 
 .glitch-text[data-motion-enhanced][data-active] > :not([aria-hidden="true"]) {

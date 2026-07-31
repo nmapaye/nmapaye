@@ -163,6 +163,29 @@ test('text motion retains eight semantic labels behind hidden visual overlays', 
   }
 });
 
+test('text shuffle overlays share their semantic label typography and geometry', async () => {
+  const css = await readBuiltCss();
+
+  assert.match(
+    css,
+    /\.glitch-text\{[^}]*position:relative[^}]*display:inline-block[^}]*\}/,
+  );
+  assert.match(
+    css,
+    /\.glitch-text__visual\{[^}]*inset:0[^}]*font:inherit[^}]*line-height:inherit[^}]*letter-spacing:inherit[^}]*text-transform:inherit[^}]*\}/,
+  );
+  assert.ok(
+    (css.match(/\.glitch-text[^{}]*>[^{}]*\{[^}]*display:block[^}]*margin:0[^}]*font:inherit[^}]*line-height:inherit[^}]*letter-spacing:inherit[^}]*text-transform:inherit[^}]*\}/g) ?? []).length >= 1,
+  );
+  for (const size of [
+    'clamp(4rem,10vw,8rem)',
+    'clamp(2.7rem,5vw,4.5rem)',
+    'clamp(1.2rem,3vw,2.4rem)',
+  ]) {
+    assert.match(css, new RegExp(`font:900 ${size.replace(/[()]/g, '\\$&')}`));
+  }
+});
+
 test('media block extraction scopes matching CSS and preserves quoted content', () => {
   const css = `
     .out-of-media { content: "decoy"; }
