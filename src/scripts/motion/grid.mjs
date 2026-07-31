@@ -68,6 +68,8 @@ export function reduceGrid(state, event, config) {
       lastY: event.y,
       lastTimestamp: event.timestamp,
       dragging: false,
+      velocityX: 0,
+      velocityY: 0,
       inertia: { active: false },
     };
   }
@@ -163,6 +165,10 @@ export function mountGrid(context) {
   let previousFrame = null;
   let visible = true;
   let visibilityObserver = null;
+  const listenerAbortController = new AbortController();
+  const abortGridListeners = () => listenerAbortController.abort();
+  if (context.signal?.aborted) abortGridListeners();
+  else context.signal?.addEventListener('abort', abortGridListeners, { once: true });
 
   function render() {
     const layout = layoutGridTiles(state, { columns: 4, rows: 4 });
@@ -220,6 +226,7 @@ export function mountGrid(context) {
       render();
       if (!state.dragging && !state.inertia.active) {
         context.coordinator.release('grid-inertia');
+        previousFrame = null;
       }
       return state.inertia.active;
     },
@@ -232,6 +239,8 @@ export function mountGrid(context) {
     },
     destroy() {
       stopGridMotion();
+      listenerAbortController.abort();
+      context.signal?.removeEventListener?.('abort', abortGridListeners);
       visibilityObserver?.disconnect();
       element.removeAttribute('tabindex');
       element.removeAttribute('role');
@@ -254,6 +263,7 @@ export function mountGrid(context) {
     if (state.pointerId === null) {
       context.coordinator.release('grid-inertia');
       context.scheduler.cancel(controller);
+      previousFrame = null;
     }
     const wasIdle = state.pointerId === null;
     state = reduceGrid(state, {
@@ -276,7 +286,7 @@ export function mountGrid(context) {
   function onPointerMove(event) {
     if (!visible) return;
     const before = state.dragging;
-    state = reduceGrid(state, {
+    const nextState = reduceGrid(state, {
       type: 'pointermove',
       pointerId: event.pointerId,
       pointerType: event.pointerType,
@@ -284,7 +294,7 @@ export function mountGrid(context) {
       y: event.clientY,
       timestamp: event.timeStamp,
     }, { threshold: 8 });
-    if (!before && state.dragging) {
+    if (!before && nextState.dragging) {
       const claimed = context.coordinator.claim('grid', 2, () => {
         releaseCapture();
         state = reduceGrid(state, {
@@ -292,15 +302,21 @@ export function mountGrid(context) {
         }, { motionAllowed: false });
         showcase?.removeAttribute('data-motion-dragging');
         context.scheduler.cancel(controller);
+        previousFrame = null;
       });
       if (!claimed) {
         releaseCapture();
         state = reduceGrid(state, {
           type: 'pointercancel', pointerId: state.pointerId,
         }, { motionAllowed: false });
+        context.scheduler.cancel(controller);
+        previousFrame = null;
         return;
       }
+      state = nextState;
       showcase?.setAttribute('data-motion-dragging', '');
+    } else {
+      state = nextState;
     }
     if (state.dragging) {
       if (context.policy.motionAllowed) context.scheduler.request(controller);
@@ -318,6 +334,7 @@ export function mountGrid(context) {
     showcase?.removeAttribute('data-motion-dragging');
     context.coordinator.release('grid');
     context.scheduler.cancel(controller);
+    previousFrame = null;
     if (
       state.inertia.active &&
       context.coordinator.claim('grid-inertia', 0, () => {
@@ -329,6 +346,7 @@ export function mountGrid(context) {
         };
         for (const node of tileNodes) node.removeAttribute('data-motion-tile-seam');
         context.scheduler.cancel(controller);
+        previousFrame = null;
       })
     ) {
       context.scheduler.request(controller);
@@ -340,6 +358,7 @@ export function mountGrid(context) {
     event.preventDefault();
     context.scheduler.cancel(controller);
     context.coordinator.release('grid-inertia');
+    previousFrame = null;
     state = reduceGrid(state, { type: 'key', key: event.key }, { keyboardStep: 80 });
     render();
   }
@@ -358,27 +377,29 @@ export function mountGrid(context) {
     };
     refreshFallbackVisibility();
     browserWindow?.addEventListener('scroll', refreshFallbackVisibility, {
-      signal: context.signal, passive: true,
+      signal: listenerAbortController.signal, passive: true,
     });
     browserWindow?.addEventListener('resize', refreshFallbackVisibility, {
-      signal: context.signal, passive: true,
+      signal: listenerAbortController.signal, passive: true,
     });
   }
 
-  element.addEventListener('pointerdown', onPointerDown, { signal: context.signal });
-  element.addEventListener('pointermove', onPointerMove, { signal: context.signal });
+  element.addEventListener('pointerdown', onPointerDown, { signal: listenerAbortController.signal });
+  element.addEventListener('pointermove', onPointerMove, { signal: listenerAbortController.signal });
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
-    element.addEventListener(type, onPointerEnd, { signal: context.signal });
+    element.addEventListener(type, onPointerEnd, { signal: listenerAbortController.signal });
   }
   for (const type of ['pointerup', 'pointercancel']) {
-    element.ownerDocument.addEventListener(type, onPointerEnd, { signal: context.signal });
+    element.ownerDocument.addEventListener(type, onPointerEnd, {
+      signal: listenerAbortController.signal,
+    });
   }
   element.ownerDocument.defaultView?.addEventListener('blur', () => {
     if (state.pointerId !== null) {
       onPointerEnd({ type: 'pointercancel', pointerId: state.pointerId });
     }
-  }, { signal: context.signal });
-  element.addEventListener('keydown', onKeyDown, { signal: context.signal });
+  }, { signal: listenerAbortController.signal });
+  element.addEventListener('keydown', onKeyDown, { signal: listenerAbortController.signal });
 
   element.style.touchAction = 'pan-y';
   element.removeAttribute('aria-hidden');

@@ -8,6 +8,7 @@ import {
   reduceGrid,
 } from '../src/scripts/motion/grid.mjs';
 import { createInteractionCoordinator } from '../src/scripts/motion/index.mjs';
+import { createFrameScheduler } from '../src/scripts/motion/scheduler.mjs';
 
 test('starts at eight pixels and pointercancel removes ownership and inertia', () => {
   let state = createGridState({ tileCount: 16, width: 1200, height: 700 });
@@ -78,17 +79,41 @@ test('touch threshold is horizontal and recycled tiles cross opposite seams', ()
   );
 });
 
+test('a new pointer clears stale velocity before a stationary release', () => {
+  let state = {
+    ...createGridState({ tileCount: 16, width: 100, height: 100 }),
+    velocityX: 12,
+    velocityY: -6,
+    inertia: { active: true },
+  };
+  state = reduceGrid(state, {
+    type: 'pointerdown', pointerId: 4, pointerType: 'mouse',
+    x: 0, y: 0, timestamp: 0,
+  }, { threshold: 8 });
+  assert.equal(state.velocityX, 0);
+  assert.equal(state.velocityY, 0);
+  state = reduceGrid(state, { type: 'pointerup', pointerId: 4 }, { motionAllowed: true });
+  assert.equal(state.inertia.active, false);
+});
+
 class FakeEventTarget {
   constructor() {
     this.handlers = new Map();
   }
 
-  addEventListener(type, listener) {
-    this.handlers.set(type, listener);
+  addEventListener(type, listener, options = {}) {
+    if (options.signal?.aborted) return;
+    if (!this.handlers.has(type)) this.handlers.set(type, new Set());
+    this.handlers.get(type).add(listener);
+    options.signal?.addEventListener('abort', () => {
+      this.handlers.get(type)?.delete(listener);
+    }, { once: true });
   }
 
   dispatch(type, event = {}) {
-    this.handlers.get(type)?.({ type, ...event });
+    for (const listener of [...(this.handlers.get(type) ?? [])]) {
+      listener({ type, ...event });
+    }
   }
 }
 
@@ -157,7 +182,7 @@ class FakeNode extends FakeEventTarget {
   set tabIndex(value) { this.attrs.set('tabindex', String(value)); }
 }
 
-function createGridHarness({ observer = true } = {}) {
+function createGridHarness({ observer = true, scheduler: suppliedScheduler } = {}) {
   const document = new FakeEventTarget();
   const browserWindow = new FakeEventTarget();
   browserWindow.innerHeight = 900;
@@ -170,7 +195,7 @@ function createGridHarness({ observer = true } = {}) {
   }
   document.querySelector = (selector) => selector === '[data-motion-grid]' ? element : null;
   const requested = new Set();
-  const scheduler = {
+  const scheduler = suppliedScheduler ?? {
     request(controller) { requested.add(controller); },
     cancel(controller) { requested.delete(controller); },
   };
@@ -192,13 +217,38 @@ function createGridHarness({ observer = true } = {}) {
   return { browserWindow, context, controller, document, element, intersectionObserver, requested, showcase };
 }
 
-function drag(harness, pointerId = 4) {
+function drag(harness, pointerId = 4, timestamp = 0) {
   harness.element.dispatch('pointerdown', {
-    pointerId, pointerType: 'mouse', clientX: 0, clientY: 0, timeStamp: 0,
+    pointerId, pointerType: 'mouse', clientX: 0, clientY: 0, timeStamp: timestamp,
   });
   harness.element.dispatch('pointermove', {
-    pointerId, pointerType: 'mouse', clientX: 8, clientY: 0, timeStamp: 16,
+    pointerId, pointerType: 'mouse', clientX: 8, clientY: 0, timeStamp: timestamp + 16,
   });
+}
+
+function createTestScheduler() {
+  const callbacks = new Map();
+  let nextId = 0;
+  return {
+    scheduler: createFrameScheduler({
+      requestFrame(callback) {
+        const id = ++nextId;
+        callbacks.set(id, callback);
+        return id;
+      },
+      cancelFrame(id) { callbacks.delete(id); },
+    }),
+    frame(timestamp) {
+      const [id, callback] = callbacks.entries().next().value ?? [];
+      assert.notEqual(callback, undefined, 'expected a scheduled frame');
+      callbacks.delete(id);
+      callback(timestamp);
+    },
+  };
+}
+
+function tileX(harness) {
+  return Number(harness.element.children[0].style.values.get('--tile-x').replace('px', ''));
 }
 
 test('mount enhances after initialization and every cancellation path releases one captured pointer', () => {
@@ -244,6 +294,56 @@ test('priority ownership preempts and rejects grid drag only after releasing bro
   drag(rejected);
   assert.equal(rejected.element.hasPointerCapture(4), false);
   assert.equal(rejected.context.coordinator.owner, 'priority-three');
+  rejected.context.coordinator.release('priority-three');
+  drag(rejected, 5, 32);
+  rejected.element.dispatch('pointerup', { pointerId: 5 });
+  assert.equal(tileX(rejected), 8);
+});
+
+test('completion and cancellation reset the grid frame baseline before the next inertia session', () => {
+  for (const ending of ['completion', 'cancellation']) {
+    const frames = createTestScheduler();
+    const harness = createGridHarness({ scheduler: frames.scheduler });
+    let timestamp = 0;
+    drag(harness, 4, timestamp);
+    harness.element.dispatch('pointerup', { pointerId: 4 });
+    frames.frame(timestamp);
+
+    if (ending === 'completion') {
+      for (let step = 0; step < 100 && frames.scheduler.snapshot().active > 0; step += 1) {
+        timestamp += 16;
+        frames.frame(timestamp);
+      }
+      assert.equal(frames.scheduler.snapshot().active, 0);
+    } else {
+      harness.context.policy.motionAllowed = false;
+      harness.controller.setPolicy(harness.context.policy);
+      harness.context.policy.motionAllowed = true;
+    }
+
+    const settled = tileX(harness);
+    timestamp += 1000;
+    drag(harness, 5, timestamp);
+    harness.element.dispatch('pointerup', { pointerId: 5 });
+    frames.frame(timestamp + 16);
+    assert.ok(Math.abs(tileX(harness) - ((settled + 8) % 400)) < 0.001, ending);
+  }
+});
+
+test('direct destroy aborts grid-owned listeners before later events can recapture motion', () => {
+  const harness = createGridHarness({ observer: false });
+  harness.controller.destroy();
+  harness.element.dispatch('pointerdown', {
+    pointerId: 4, pointerType: 'mouse', clientX: 0, clientY: 0, timeStamp: 0,
+  });
+  harness.element.dispatch('pointermove', {
+    pointerId: 4, pointerType: 'mouse', clientX: 8, clientY: 0, timeStamp: 16,
+  });
+  harness.document.dispatch('pointerup', { pointerId: 4 });
+  harness.browserWindow.dispatch('scroll');
+  assert.equal(harness.element.hasPointerCapture(4), false);
+  assert.equal(harness.context.coordinator.owner, null);
+  assert.equal(harness.requested.size, 0);
 });
 
 test('offscreen observation and fallback stop active inertia synchronously while keyboard pans stay frame-free', () => {
