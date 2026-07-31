@@ -217,7 +217,10 @@ test('difference blobs blend at their own page-layer boundary', async () => {
   const [html, builtCss] = await Promise.all([readHomepage(), readBuiltCss()]);
   const root = findExactCssRule(builtCss, /^\.motion-root$/);
   const blendLayer = findExactCssRule(builtCss, /^\.motion-layer--blend$/);
-  const blob = findExactCssRule(builtCss, /^\[data-motion-blob\]$/);
+  const blob = collectCssRuleBlocks(builtCss).find(({ prelude, block }) => (
+    splitSimpleSelectorList(prelude).includes('[data-motion-blob]')
+      && /width\s*:/.test(block)
+  ))?.block ?? null;
 
   assert.match(html, /class="motion-root"[^>]*data-motion-root/);
   assert.equal((html.match(/class="motion-layer motion-layer--blend"/g) ?? []).length, 1);
@@ -225,6 +228,14 @@ test('difference blobs blend at their own page-layer boundary', async () => {
   assert.match(root ?? '', /display:\s*contents/);
   assert.match(blendLayer ?? '', /mix-blend-mode:\s*difference/);
   assert.doesNotMatch(blob ?? '', /mix-blend-mode/);
+  assert.match(blob ?? '', /width:\s*clamp\(7\.5rem,\s*18vw,\s*16rem\)/);
+  const translateIndex = blob?.indexOf('translate3d(') ?? -1;
+  const centerIndex = blob?.indexOf('translate(-50%,-50%)') ?? -1;
+  const rotateIndex = blob?.indexOf('rotate(') ?? -1;
+  assert.ok(
+    translateIndex >= 0 && translateIndex < centerIndex && centerIndex < rotateIndex,
+    'blob transforms translate the spring point, center the box, then rotate it',
+  );
 });
 
 test('built motion delivery keeps one shared module, stable posters, and writing fallbacks', async () => {

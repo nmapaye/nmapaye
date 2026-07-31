@@ -97,11 +97,12 @@
 }
 
 [data-motion-blob] {
-  width: clamp(10rem, 24vw, 22rem);
+  width: clamp(7.5rem, 18vw, 16rem);
   aspect-ratio: 1;
   border-radius: 48% 52% 61% 39% / 43% 37% 63% 57%;
   background: var(--white);
   transform: translate3d(var(--blob-x, -200vw), var(--blob-y, -200vh), 0)
+    translate(-50%, -50%)
     rotate(var(--blob-rotate, 0deg))
     scale(var(--blob-scale-x, 1), var(--blob-scale-y, 1));
 }
