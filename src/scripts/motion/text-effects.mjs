@@ -257,10 +257,17 @@ export function mountTextEffects(context) {
   function onTrigger(event) {
     const resolved = resolveTarget(event);
     if (!resolved) return;
+    const currentOwner = context.coordinator.owner;
+    const cardBurstHandoff =
+      resolved.entry.card &&
+      event.target.closest?.('[data-motion-burst]') &&
+      typeof currentOwner === 'string' &&
+      currentOwner.startsWith('link:');
     if (
       event.type === 'pointerover' &&
       event.relatedTarget &&
-      resolved.pointerBoundary.contains(event.relatedTarget)
+      resolved.pointerBoundary.contains(event.relatedTarget) &&
+      !cardBurstHandoff
     ) return;
     start(resolved.entry, resolved.cancel, event.target);
   }

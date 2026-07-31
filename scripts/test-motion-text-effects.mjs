@@ -152,6 +152,7 @@ function createHarness({ observer = true } = {}) {
   projectText.tagName = 'h3';
   const projectH3 = projectText;
   const projectVisual = project.append(new FakeNode({ attrs: { 'data-motion-shuffle-visual': '', 'aria-hidden': 'true' }, text: 'AURORA' }));
+  const projectDescription = projectCard.append(new FakeNode({ text: 'On-device caffeine tracking.' }));
   const projectLink = projectCard.append(new FakeNode({
     attrs: { 'data-motion-burst': '', 'data-motion-shake-related': 'work-title', href: '#aurora' },
   }));
@@ -237,7 +238,8 @@ function createHarness({ observer = true } = {}) {
     controller, hero, heroTitle, inertShuffle, inertText, inertVisual, inertWrapper,
     innerInteractive, intersectionObserver, nav, nestedNumber, nestedShuffle, nestedText,
     nestedVisual, outerInteractive, project, projectLink,
-    projectCard, projectH3, projectStack, projectText, projectVisual, requested,
+    projectCard, projectDescription, projectH3, projectStack, projectText, projectVisual,
+    requested,
     secondCard, secondStack, setNow(value) { now = value; }, work, workTitle,
   };
 }
@@ -438,6 +440,39 @@ test('burst follow-ups use the original activation time and stale hidden work st
   harness.intersectionObserver.emit([{ target: harness.work, isIntersecting: true }]);
   assert.equal(harness.requested.size, 0);
   assert.equal(harness.project.getAttribute('data-active'), null);
+});
+
+test('same-card burst entry queues the project shuffle despite its card pointer boundary', () => {
+  const harness = createHarness();
+
+  trigger(harness, harness.projectH3);
+  assert.equal(harness.project.getAttribute('data-active'), '');
+  assert.equal(harness.context.coordinator.owner, 'shuffle:01');
+
+  harness.setNow(50);
+  assert.equal(harness.context.coordinator.claim('link:#aurora', 1), true);
+  assert.equal(harness.project.getAttribute('data-active'), null);
+  assert.equal(harness.context.coordinator.owner, 'link:#aurora');
+
+  harness.setNow(100);
+  trigger(harness, harness.projectLink, 'pointerover', {
+    relatedTarget: harness.projectDescription,
+  });
+  assert.equal(harness.project.getAttribute('data-active'), null);
+  assert.equal(harness.requested.size, 0);
+
+  harness.context.coordinator.release('link:#aurora');
+  assert.equal(harness.project.getAttribute('data-active'), '');
+  assert.equal(harness.context.coordinator.owner, 'shuffle:01');
+  assert.equal(harness.requested.size, 1);
+  harness.controller.update(499);
+  assert.equal(harness.project.getAttribute('data-active'), '');
+  harness.controller.update(500);
+  assert.equal(harness.project.getAttribute('data-active'), null);
+  assert.equal(harness.projectVisual.textContent, 'AURORA');
+  assert.equal(harness.projectText.textContent, 'AURORA');
+  assert.equal(harness.context.coordinator.owner, null);
+  assert.equal(harness.requested.size, 0);
 });
 
 test('navigation preemption discards a queued burst follow-up before it can mutate text', () => {
