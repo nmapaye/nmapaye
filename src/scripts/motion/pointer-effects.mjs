@@ -49,6 +49,12 @@ function resetStickerNode(node) {
   node.removeAttribute('style');
 }
 
+function resetParticleNode(node) {
+  node.removeAttribute('data-active');
+  node.removeAttribute('style');
+  node.textContent = '';
+}
+
 export function mountPointerEffects(context) {
   const stickerNodes = [...context.root.querySelectorAll('[data-motion-sticker]')];
   const particleNodes = [...context.root.querySelectorAll('[data-motion-particle]')];
@@ -97,7 +103,7 @@ export function mountPointerEffects(context) {
     const owner = state.burstOwner;
     state.particles = [];
     state.burstOwner = null;
-    hide(particleNodes);
+    for (const node of particleNodes) resetParticleNode(node);
     if (owner) context.coordinator.release(owner);
   };
   const stopIfIdle = () => {
@@ -211,8 +217,11 @@ export function mountPointerEffects(context) {
       });
       particleNodes.forEach((node, index) => {
         const item = state.particles[index];
-        node.toggleAttribute('data-active', Boolean(item));
-        if (!item) return;
+        if (!item) {
+          resetParticleNode(node);
+          return;
+        }
+        node.toggleAttribute('data-active', true);
         const progress = Math.max(
           0,
           Math.min(1, (timestamp - item.startedAt) / item.duration),

@@ -240,6 +240,30 @@ test('burst output is deterministic, capped at eight, and expires at 300ms', () 
   assert.ok(first.every((particle) => ['✦', '◆', '⚡', '↗', '01', '02', '03', '04'].includes(particle.symbol)));
 });
 
+test('expired bursts remove renderer-owned particle styles and glyphs', () => {
+  const harness = createPointerHarness();
+  const link = new FakeNode({
+    attrs: {
+      'data-motion-burst': '',
+      'data-motion-shake-related': 'contact-title',
+      href: '/resume.pdf',
+    },
+  });
+
+  harness.dispatch('pointerover', { target: link, relatedTarget: null });
+  harness.controller.update(0);
+
+  assert.equal(harness.particles.some((node) => node.style.opacity !== ''), true);
+  assert.equal(harness.particles.some((node) => node.textContent !== ''), true);
+
+  harness.controller.update(100);
+
+  assert.equal(harness.particles.some((node) => node.attrs.has('data-active')), false);
+  assert.equal(harness.particles.every((node) => node.style.opacity === ''), true);
+  assert.equal(harness.particles.every((node) => node.style.values.size === 0), true);
+  assert.equal(harness.particles.every((node) => node.textContent === ''), true);
+});
+
 test('blob springs approach the target without overshooting the configured bound', () => {
   const next = advanceBlob(
     { x: 0, y: 0, vx: 0, vy: 0 },
