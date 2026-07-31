@@ -258,9 +258,11 @@ export function mountTextEffects(context) {
     const resolved = resolveTarget(event);
     if (!resolved) return;
     const currentOwner = context.coordinator.owner;
+    const burstTarget = event.target.closest?.('[data-motion-burst]');
     const cardBurstHandoff =
       resolved.entry.card &&
-      event.target.closest?.('[data-motion-burst]') &&
+      burstTarget &&
+      !burstTarget.contains(event.relatedTarget) &&
       typeof currentOwner === 'string' &&
       currentOwner.startsWith('link:');
     if (

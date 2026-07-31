@@ -157,6 +157,8 @@ function createHarness({ observer = true } = {}) {
     attrs: { 'data-motion-burst': '', 'data-motion-shake-related': 'work-title', href: '#aurora' },
   }));
   projectLink.tagName = 'a';
+  const projectLinkLabel = projectLink.append(new FakeNode({ text: 'Read case study' }));
+  const projectLinkIcon = projectLink.append(new FakeNode({ text: '↗' }));
   const projectStack = projectCard.append(new FakeNode({ attrs: { 'data-motion-card-stack': '' } }));
   for (let layer = 0; layer < 3; layer += 1) {
     projectStack.append(new FakeNode({ attrs: { 'data-motion-card-layer': String(layer) } }));
@@ -184,6 +186,7 @@ function createHarness({ observer = true } = {}) {
     attrs: { 'data-motion-shuffle': '', 'data-motion-shuffle-label': 'Unrelated' },
   }));
   const inertText = inertShuffle.append(new FakeNode({ text: 'Unrelated' }));
+  const inertDetail = inertShuffle.append(new FakeNode({ text: 'detail' }));
   const inertVisual = inertShuffle.append(new FakeNode({
     attrs: { 'data-motion-shuffle-visual': '', 'aria-hidden': 'true' },
     text: 'Unrelated',
@@ -235,9 +238,10 @@ function createHarness({ observer = true } = {}) {
   const controller = mountTextEffects(context);
   return {
     body, browserWindow, chapter, chapterLink, chapterText, chapterVisual, chapters, context,
-    controller, hero, heroTitle, inertShuffle, inertText, inertVisual, inertWrapper,
+    controller, hero, heroTitle, inertDetail, inertShuffle, inertText, inertVisual,
+    inertWrapper,
     innerInteractive, intersectionObserver, nav, nestedNumber, nestedShuffle, nestedText,
-    nestedVisual, outerInteractive, project, projectLink,
+    nestedVisual, outerInteractive, project, projectLink, projectLinkIcon, projectLinkLabel,
     projectCard, projectDescription, projectH3, projectStack, projectText, projectVisual,
     requested,
     secondCard, secondStack, setNow(value) { now = value; }, work, workTitle,
@@ -331,6 +335,32 @@ test('nested interactive wrappers delegate only to the shuffle owned by the near
   assert.equal(harness.nestedText.textContent, 'Nested');
   assert.equal(harness.context.coordinator.owner, null);
   assert.equal(harness.requested.size, 0);
+});
+
+test('direct and card pointer boundaries keep their first deadline across internal descendants', () => {
+  for (const boundary of ['direct', 'card']) {
+    const harness = createHarness();
+    const entry = boundary === 'direct' ? harness.inertShuffle : harness.project;
+    const first = boundary === 'direct' ? harness.inertText : harness.projectDescription;
+    const second = boundary === 'direct' ? harness.inertDetail : harness.projectStack;
+    const visual = boundary === 'direct' ? harness.inertVisual : harness.projectVisual;
+    const semantic = boundary === 'direct' ? harness.inertText : harness.projectText;
+    const label = boundary === 'direct' ? 'Unrelated' : 'AURORA';
+
+    trigger(harness, first);
+    assert.equal(entry.getAttribute('data-active'), '', boundary);
+    harness.controller.update(100);
+    harness.setNow(150);
+    trigger(harness, second, 'pointerover', { relatedTarget: first });
+    harness.controller.update(399);
+    assert.equal(entry.getAttribute('data-active'), '', boundary);
+    harness.controller.update(400);
+    assert.equal(entry.getAttribute('data-active'), null, boundary);
+    assert.equal(visual.textContent, label, boundary);
+    assert.equal(semantic.textContent, label, boundary);
+    assert.equal(harness.context.coordinator.owner, null, boundary);
+    assert.equal(harness.requested.size, 0, boundary);
+  }
 });
 
 test('noninteractive wrappers do not trigger a contained shuffle', () => {
@@ -465,6 +495,38 @@ test('same-card burst entry queues the project shuffle despite its card pointer 
   assert.equal(harness.project.getAttribute('data-active'), '');
   assert.equal(harness.context.coordinator.owner, 'shuffle:01');
   assert.equal(harness.requested.size, 1);
+  harness.controller.update(499);
+  assert.equal(harness.project.getAttribute('data-active'), '');
+  harness.controller.update(500);
+  assert.equal(harness.project.getAttribute('data-active'), null);
+  assert.equal(harness.projectVisual.textContent, 'AURORA');
+  assert.equal(harness.projectText.textContent, 'AURORA');
+  assert.equal(harness.context.coordinator.owner, null);
+  assert.equal(harness.requested.size, 0);
+});
+
+test('internal burst-link pointer movement preserves the first queued shuffle deadline', () => {
+  const harness = createHarness();
+
+  trigger(harness, harness.projectH3);
+  harness.setNow(50);
+  assert.equal(harness.context.coordinator.claim('link:#aurora', 1), true);
+
+  harness.setNow(100);
+  trigger(harness, harness.projectLinkLabel, 'pointerover', {
+    relatedTarget: harness.projectDescription,
+  });
+  harness.setNow(150);
+  trigger(harness, harness.projectLinkIcon, 'pointerover', {
+    relatedTarget: harness.projectLinkLabel,
+  });
+  assert.equal(harness.project.getAttribute('data-active'), null);
+  assert.equal(harness.context.coordinator.owner, 'link:#aurora');
+  assert.equal(harness.requested.size, 0);
+
+  harness.context.coordinator.release('link:#aurora');
+  assert.equal(harness.project.getAttribute('data-active'), '');
+  assert.equal(harness.context.coordinator.owner, 'shuffle:01');
   harness.controller.update(499);
   assert.equal(harness.project.getAttribute('data-active'), '');
   harness.controller.update(500);
