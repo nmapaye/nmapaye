@@ -125,6 +125,16 @@ test('motion markup uses fixed decorative pools and canonical poster assets', as
   assert.doesNotMatch(html, /data-motion-grid[^>]*tabindex="0"/);
 });
 
+test('infinite grid is a static 16-tile fallback without duplicate links', async () => {
+  const html = await readHomepage();
+  const grid = html.match(/<div class="infinite-project-grid"[\s\S]*?<\/div>\s*<\/div>/)?.[0] ?? '';
+  assert.equal((html.match(/data-motion-grid-tile=/g) ?? []).length, 16);
+  assert.match(grid, /aria-hidden="true"/);
+  assert.doesNotMatch(grid, /tabindex="0"|<a\b|<article\b/);
+  assert.equal((html.match(/class="work-feature"/g) ?? []).length, 1);
+  assert.equal((html.match(/class="project-card"/g) ?? []).length, 3);
+});
+
 test('media block extraction scopes matching CSS and preserves quoted content', () => {
   const css = `
     .out-of-media { content: "decoy"; }

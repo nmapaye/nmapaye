@@ -1,0 +1,24 @@
+---
+import { projects } from '../../data/site';
+import ProjectPoster from './ProjectPoster.astro';
+
+const tiles = Array.from({ length: 16 }, (_, index) => projects[index % projects.length]);
+---
+
+<div class="infinite-project-grid" data-motion-grid aria-hidden="true">
+  <p id="project-grid-instructions" class="motion-sr-only">
+    Draggable project-poster grid. Use Left and Right arrows to pan; Home resets.
+  </p>
+  <div class="infinite-project-grid__camera" data-motion-grid-camera>
+    {tiles.map((project, index) => (
+      <div
+        data-motion-grid-tile={index}
+        style={`left:${(index % 4) * 25}%;top:${Math.floor(index / 4) * 25}%`}
+      >
+        <div data-motion-grid-bounce>
+          <ProjectPoster project={project} variant="grid" />
+        </div>
+      </div>
+    ))}
+  </div>
+</div>

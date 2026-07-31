@@ -1,6 +1,7 @@
 ---
 import { projects } from '../data/site';
 import ProjectCard from './ProjectCard.astro';
+import InfiniteProjectGrid from './effects/InfiniteProjectGrid.astro';
 const featured = projects.find((project) => project.featured);
 const secondary = projects.filter((project) => !project.featured);
 ---
@@ -10,6 +11,8 @@ const secondary = projects.filter((project) => !project.featured);
     <p class="chapter__label">01 / Work</p>
     <h2 id="work-title" class="display">Selected work</h2>
   </header>
+
+  <InfiniteProjectGrid />
 
   {featured && (
     <article class="work-feature">
