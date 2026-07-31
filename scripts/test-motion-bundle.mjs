@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { gzipSync } from 'node:zlib';
-import { tokenizeJavaScript } from './motion-test-lexer.mjs';
+import { assertValidModuleFixture, tokenizeJavaScript } from './motion-test-lexer.mjs';
 
 const buildRoot = path.resolve(
   process.cwd(),
@@ -38,7 +38,8 @@ function staticSpecifier(tokens, start) {
   return null;
 }
 
-function importedScripts(source) {
+function importedScripts(source, { validate = true } = {}) {
+  if (validate) assertValidModuleFixture(source);
   const tokens = tokenizeJavaScript(source);
   const scripts = [];
   for (let index = 0; index < tokens.length; index += 1) {
@@ -83,6 +84,14 @@ test('import parser captures minified dependencies without parsing comments or s
   ]);
 });
 
+test('fixture validity helper accepts module source before lexer assertions', () => {
+  assert.doesNotThrow(() => assertValidModuleFixture('export const fixture = true;'));
+  assert.throws(
+    () => assertValidModuleFixture('export default /import\\"invalid.js\\"/giu;'),
+    /invalid JavaScript module fixture/,
+  );
+});
+
 test('import parser handles templates, regexes, and escaped module specifiers', () => {
   const source = [
     'const template = `raw import "./raw.js"; ${import("./dynamic.js")}`;',
@@ -113,19 +122,25 @@ test('import parser ignores regex literals after expression-prefix keywords', ()
 });
 
 test('import parser resets expression context at tagged template interpolations', () => {
-  const source = 'const tagged = tag`${/import\\"fake.js\\"/giu.test(value), import("./real.js")} ${import("./later.js")}`;';
+  const source = 'const tagged = tag`${/import"fake.js"/giu.test(value), import("./real.js")} ${import("./later.js")}`;';
 
   assert.deepEqual(importedScripts(source), ['./real.js', './later.js']);
 });
 
 test('import parser ignores regex literals after default and extends', () => {
   const source = [
-    'export default /import\\"default.js\\"/giu;',
-    'class C extends /import\\"extends.js\\"/.constructor {}',
+    'export default /import"default.js"/giu;',
+    'class C extends /import"extends.js"/.constructor {}',
     'import "./real.js";',
   ].join('\n');
 
   assert.deepEqual(importedScripts(source), ['./real.js']);
+});
+
+test('import parser keeps division after property-named default as expression context', () => {
+  const source = 'module.default / import("./division-property.js") / 2;';
+
+  assert.deepEqual(importedScripts(source), ['./division-property.js']);
 });
 
 test('import parser fully cooks valid specifier escapes and rejects malformed escapes', () => {
@@ -148,12 +163,13 @@ test('import parser fully cooks valid specifier escapes and rejects malformed es
     './slash\\name.js',
     './linecontinued.js',
   ]);
+  // These deliberately malformed string-escape lexer units are not module fixtures.
   assert.throws(
-    () => importedScripts('import "./bad\\u00zz.js";'),
+    () => importedScripts('import "./bad\\u00zz.js";', { validate: false }),
     /invalid JavaScript string escape/,
   );
   assert.throws(
-    () => importedScripts('import "./trailing\\'),
+    () => importedScripts('import "./trailing\\', { validate: false }),
     /invalid JavaScript string escape/,
   );
 });

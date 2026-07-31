@@ -1,3 +1,22 @@
+import { spawnSync } from 'node:child_process';
+
+const regexEntryKeywords = new Set([
+  'await', 'case', 'default', 'delete', 'do', 'else', 'extends', 'in',
+  'instanceof', 'new', 'of', 'return', 'throw', 'typeof', 'void', 'yield',
+]);
+
+export function assertValidModuleFixture(source) {
+  const result = spawnSync(
+    process.execPath,
+    ['--input-type=module', '--check'],
+    { encoding: 'utf8', input: source },
+  );
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw new SyntaxError(`invalid JavaScript module fixture:\n${result.stderr}`);
+  }
+}
+
 function cookEscape(source, index) {
   const character = source[index];
   if (character === undefined) throw new SyntaxError('invalid JavaScript string escape');
@@ -54,10 +73,11 @@ function readString(source, index) {
 
 function canStartRegex(tokens, expressionStart) {
   const previous = tokens.at(-1);
-  return expressionStart || !previous || previous.type === 'word' && [
-    'await', 'case', 'default', 'delete', 'do', 'else', 'extends', 'in',
-    'instanceof', 'new', 'of', 'return', 'throw', 'typeof', 'void', 'yield',
-  ].includes(previous.value) || (
+  return expressionStart || !previous || (
+    previous.type === 'word' &&
+    regexEntryKeywords.has(previous.value) &&
+    (!['default', 'extends'].includes(previous.value) || tokens.at(-2)?.value !== '.')
+  ) || (
     previous.type === 'punctuation' &&
     '([{:;,=!?&|+-*%^~<>'.includes(previous.value)
   );

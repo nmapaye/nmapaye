@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { createFrameScheduler } from '../src/scripts/motion/scheduler.mjs';
-import { tokenizeJavaScript } from './motion-test-lexer.mjs';
+import { assertValidModuleFixture, tokenizeJavaScript } from './motion-test-lexer.mjs';
 
 function runtimeOwnershipViolations(name, source) {
+  assertValidModuleFixture(source);
   const tokens = tokenizeJavaScript(source);
   const violations = [];
   if (hasNamedMemberReference(tokens, 'setInterval')) violations.push('setInterval');
@@ -220,6 +221,12 @@ test('runtime ownership scan ignores regex literals after default and extends', 
   ].join('\n');
 
   assert.deepEqual(runtimeOwnershipViolations('pointer-effects.mjs', source), []);
+});
+
+test('runtime ownership scan recognizes division after property-named extends', () => {
+  const source = 'object.extends / Math.random / 2;';
+
+  assert.deepEqual(runtimeOwnershipViolations('pointer-effects.mjs', source), ['Math.random']);
 });
 
 test('runtime ownership scan selects only top-level destructured property keys', () => {
