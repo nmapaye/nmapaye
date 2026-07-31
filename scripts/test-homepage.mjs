@@ -321,6 +321,18 @@ test('project cards keep their existing semantic content while exposing four dec
   assert.match(html, /DMA sampling with prioritized FreeRTOS tasks/);
 });
 
+test('stack poster geometry stays inside the fixed card-stack region', async () => {
+  const builtCss = await readBuiltCss();
+  const stackPoster = findExactCssRule(
+    builtCss,
+    /^\.project-poster--stack$/,
+  );
+
+  assert.ok(stackPoster, 'built CSS is missing the stack-poster geometry rule');
+  assert.match(stackPoster, /height:\s*100%/);
+  assert.match(stackPoster, /aspect-ratio:\s*auto/);
+});
+
 test('narrow card stacks keep a visible fan inside the mobile gutter', async () => {
   const [authoredCss, builtCss] = await Promise.all([
     readSource('src/styles/motion.css'),

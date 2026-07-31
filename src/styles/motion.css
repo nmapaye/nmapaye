@@ -134,6 +134,11 @@
   object-fit: cover;
 }
 
+.project-poster--stack {
+  height: 100%;
+  aspect-ratio: auto;
+}
+
 .project-poster figcaption {
   position: absolute;
   inset: auto 0 0;
