@@ -213,7 +213,10 @@ export function mountTextEffects(context) {
     const scopedShuffle = eventElement.closest('[data-motion-card]')?.querySelector(
       '[data-motion-shuffle]',
     );
-    const shuffle = directShuffle ?? scopedShuffle;
+    const interactiveShuffle = eventElement.closest('a, button, [tabindex]')?.querySelector(
+      '[data-motion-shuffle]',
+    );
+    const shuffle = directShuffle ?? scopedShuffle ?? interactiveShuffle;
     if (shuffleByElement.has(shuffle)) {
       return { entry: shuffleByElement.get(shuffle), cancel: cancelShuffle };
     }

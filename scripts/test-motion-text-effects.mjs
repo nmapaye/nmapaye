@@ -96,6 +96,7 @@ class FakeNode extends FakeEventTarget {
   }
   matches(selector) {
     if (selector === '*') return true;
+    if (selector === 'a' || selector === 'button') return this.tagName === selector;
     if (selector === '[aria-hidden="true"]') return this.attrs.get('aria-hidden') === 'true';
     const compoundAttributes = [...selector.matchAll(/\[([^\]=]+)(?:=\"([^\"]+)\")?\]/g)];
     if (compoundAttributes.length > 1) {
@@ -154,6 +155,7 @@ function createHarness({ observer = true } = {}) {
   const projectLink = projectCard.append(new FakeNode({
     attrs: { 'data-motion-burst': '', 'data-motion-shake-related': 'work-title', href: '#aurora' },
   }));
+  projectLink.tagName = 'a';
   const projectStack = projectCard.append(new FakeNode({ attrs: { 'data-motion-card-stack': '' } }));
   for (let layer = 0; layer < 3; layer += 1) {
     projectStack.append(new FakeNode({ attrs: { 'data-motion-card-layer': String(layer) } }));
@@ -164,19 +166,34 @@ function createHarness({ observer = true } = {}) {
     secondStack.append(new FakeNode({ attrs: { 'data-motion-card-layer': String(layer) } }));
   }
   const chapters = ['Work', 'Experience', 'Notes', 'Contact'].map((label) => {
-    const chapter = nav.append(new FakeNode({
+    const link = nav.append(new FakeNode({ attrs: { href: `#${label.toLowerCase()}` } }));
+    link.tagName = 'a';
+    const chapter = link.append(new FakeNode({
       attrs: { 'data-motion-shuffle': '', 'data-motion-shuffle-label': label },
     }));
     const text = chapter.append(new FakeNode({ text: label }));
     const visual = chapter.append(new FakeNode({ attrs: { 'data-motion-shuffle-visual': '', 'aria-hidden': 'true' }, text: label }));
-    return { chapter, text, visual };
+    return { chapter, link, text, visual };
   });
   const [{ chapter, text: chapterText, visual: chapterVisual }] = chapters;
-  const chapterLink = nav.append(new FakeNode({ attrs: { href: '#work' } }));
+  const chapterLink = chapters[0].link;
+  const inertWrapper = nav.append(new FakeNode());
+  const inertShuffle = inertWrapper.append(new FakeNode({
+    attrs: { 'data-motion-shuffle': '', 'data-motion-shuffle-label': 'Unrelated' },
+  }));
+  const inertText = inertShuffle.append(new FakeNode({ text: 'Unrelated' }));
+  const inertVisual = inertShuffle.append(new FakeNode({
+    attrs: { 'data-motion-shuffle-visual': '', 'aria-hidden': 'true' },
+    text: 'Unrelated',
+  }));
   document.body = body;
   document.querySelectorAll = (selector) => {
     if (selector === '[data-motion-shake]') return [heroTitle, workTitle];
-    if (selector === '[data-motion-shuffle]') return [project, ...chapters.map(({ chapter: item }) => item)];
+    if (selector === '[data-motion-shuffle]') return [
+      project,
+      ...chapters.map(({ chapter: item }) => item),
+      inertShuffle,
+    ];
     if (selector === '[data-motion-card]') return [projectCard, secondCard];
     return [];
   };
@@ -203,7 +220,8 @@ function createHarness({ observer = true } = {}) {
   const controller = mountTextEffects(context);
   return {
     body, browserWindow, chapter, chapterLink, chapterText, chapterVisual, chapters, context,
-    controller, hero, heroTitle, intersectionObserver, project, projectLink,
+    controller, hero, heroTitle, inertShuffle, inertText, inertVisual, inertWrapper,
+    intersectionObserver, nav, project, projectLink,
     projectCard, projectH3, projectStack, projectText, projectVisual, requested,
     secondCard, secondStack, setNow(value) { now = value; }, work, workTitle,
   };
@@ -234,6 +252,32 @@ test('production project shuffles claim their card owner while Chapter Index lab
     'shuffle:label:4',
   ]);
   assert.equal(new Set(['shuffle:01', ...owners]).size, 5);
+});
+
+test('Chapter Index focus on its link starts the contained shuffle and resolves Experience by 400ms', () => {
+  const harness = createHarness();
+  const experience = harness.chapters[1];
+
+  trigger(harness, experience.link, 'focusin');
+  assert.equal(experience.chapter.getAttribute('data-active'), '');
+  assert.equal(harness.context.coordinator.owner, 'shuffle:label:2');
+  harness.controller.update(399);
+  assert.equal(experience.chapter.getAttribute('data-active'), '');
+  harness.controller.update(400);
+  assert.equal(experience.chapter.getAttribute('data-active'), null);
+  assert.equal(experience.visual.textContent, 'Experience');
+  assert.equal(experience.text.textContent, 'Experience');
+});
+
+test('noninteractive wrappers do not trigger a contained shuffle', () => {
+  const harness = createHarness();
+
+  trigger(harness, harness.inertWrapper);
+  assert.equal(harness.inertShuffle.getAttribute('data-active'), null);
+  assert.equal(harness.inertVisual.textContent, 'Unrelated');
+  assert.equal(harness.inertText.textContent, 'Unrelated');
+  assert.equal(harness.context.coordinator.owner, null);
+  assert.equal(harness.requested.size, 0);
 });
 
 test('project shuffle yields its card stack to static expansion without cancelling, then another card can preempt', () => {
@@ -351,10 +395,10 @@ test('navigation preemption discards a queued burst follow-up before it can muta
 
 test('offscreen observer and fallback cancellation resolve Chapter Index entries to nav', () => {
   const observed = createHarness();
-  assert.ok(observed.intersectionObserver.observed.includes(observed.chapter.parent));
+  assert.ok(observed.intersectionObserver.observed.includes(observed.nav));
   assert.ok(!observed.intersectionObserver.observed.includes(observed.body));
   trigger(observed, observed.chapter);
-  observed.intersectionObserver.emit([{ target: observed.chapter.parent, isIntersecting: false }]);
+  observed.intersectionObserver.emit([{ target: observed.nav, isIntersecting: false }]);
   assert.equal(observed.chapter.getAttribute('data-active'), null);
   assert.equal(observed.chapterVisual.textContent, 'Work');
   assert.equal(observed.chapterText.textContent, 'Work');
