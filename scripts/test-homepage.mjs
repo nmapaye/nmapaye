@@ -96,6 +96,14 @@ export function visibleText(html) {
     .trim();
 }
 
+test('hero marquee keeps one semantic source and hidden visual tracks', async () => {
+  const html = await readHomepage();
+  const marquee = html.match(/<p class="kinetic-marquee"[\s\S]*?<\/p>/)?.[0] ?? '';
+  assert.match(marquee, /kinetic-marquee__source[^>]*>SYSTEMS \/ SECURITY \/ PRODUCT/);
+  assert.equal((marquee.match(/data-motion-marquee-track/g) ?? []).length, 2);
+  assert.equal((marquee.match(/aria-hidden="true"/g) ?? []).length, 2);
+});
+
 test('motion markup uses fixed decorative pools and canonical poster assets', async () => {
   const html = await readHomepage();
   const posterPaths = [

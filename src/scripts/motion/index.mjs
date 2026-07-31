@@ -3,6 +3,7 @@ import {
   createFrameScheduler,
 } from './scheduler.mjs';
 import { mountPointerEffects } from './pointer-effects.mjs';
+import { mountMarquee } from './marquee.mjs';
 import { observeMotionPolicy } from './policy.mjs';
 
 const mounts = new WeakMap();
@@ -200,7 +201,7 @@ export function initializeMotion(root, environment = {}) {
     observedPolicy?.refresh?.bind(observedPolicy) ?? (() => context.policy);
   const controllerFactories = environment.controllerFactories ?? (
     root.getAttribute?.('data-motion-kinetic') === 'true'
-      ? [mountPointerEffects]
+      ? [mountPointerEffects, mountMarquee]
       : []
   );
   for (const factory of controllerFactories) {

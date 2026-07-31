@@ -1,6 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import heroPhoto from '../assets/portfolio/hero-balloon.png';
+import KineticMarquee from './effects/KineticMarquee.astro';
 import { links, profile } from '../data/site';
 
 const base = import.meta.env.BASE_URL;
@@ -30,6 +31,7 @@ const resume = `${base}/${profile.resume}`.replace(/\/+/g, '/');
       <a class="btn" data-motion-burst href={`mailto:${links.email}`}>Email</a>
     </div>
   </div>
+  <KineticMarquee />
 </section>
 
 <style>
