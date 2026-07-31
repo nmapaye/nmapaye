@@ -40,5 +40,12 @@ npm test
 python3 scripts/test-resume.py
 ```
 
+To verify the OpenAI Sites distribution (including its packaged worker and real
+static assets), run:
+
+```sh
+npm run test:sites
+```
+
 The generated one-page résumé is committed at `public/resume.pdf`. Rebuild and
 test it after changing its source content.

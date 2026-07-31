@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "build:sites": "npm run build && node scripts/stage-sites-build.mjs",
     "test": "npm run build && node --test scripts/test-seo.mjs scripts/test-homepage.mjs scripts/test-hosting.mjs",
+    "test:sites": "npm run build:sites && node --test scripts/test-sites-build.mjs",
     "test:homepage": "npm run build && node --test scripts/test-homepage.mjs",
     "test:seo": "npm run build && node --test scripts/test-seo.mjs",
     "preview": "astro preview",
