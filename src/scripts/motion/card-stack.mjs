@@ -16,7 +16,12 @@ export function reduceCardStack(state, event, policy) {
         : event.type === 'focusout'
           ? false
           : state.focused,
-    tapped: event.type === 'activate' ? !state.tapped : state.tapped,
+    tapped:
+      event.type === 'activate'
+        ? ['touch', 'pen'].includes(event.pointerType)
+          ? !state.tapped
+          : false
+        : state.tapped,
     preventDefault: false,
   };
   const expanded = Boolean(next.hovered || next.focused || next.tapped);
@@ -199,6 +204,7 @@ export function mountCardStacks(context) {
     entry.card.addEventListener('click', (event) => {
       transition(entry, {
         type: 'activate',
+        pointerType: event.pointerType,
         interactiveTarget: Boolean(event.target.closest?.('a,button')),
       });
     }, { signal: listenerAbortController.signal });

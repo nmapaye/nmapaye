@@ -17,6 +17,7 @@ test('hover, focus, and tap expand without preventing a nested link', () => {
   assert.equal(reduceCardStack(initial, { type: 'focusin' }, { motionAllowed: true }).expanded, true);
   const tapped = reduceCardStack(initial, {
     type: 'activate',
+    pointerType: 'touch',
     interactiveTarget: true,
   }, { motionAllowed: true });
   assert.equal(tapped.expanded, true);
@@ -32,16 +33,27 @@ test('reduced motion uses the static expanded state', () => {
 test('a second tap collapses the same stack without cancelling activation', () => {
   const first = reduceCardStack(
     initial,
-    { type: 'activate', interactiveTarget: true },
+    { type: 'activate', pointerType: 'touch', interactiveTarget: true },
     { motionAllowed: true },
   );
   const second = reduceCardStack(
     first,
-    { type: 'activate', interactiveTarget: true },
+    { type: 'activate', pointerType: 'touch', interactiveTarget: true },
     { motionAllowed: true },
   );
   assert.equal(second.expanded, false);
   assert.equal(second.preventDefault, false);
+});
+
+test('mouse activation does not latch a card after hover ends', () => {
+  const harness = createHarness();
+  const { card, stack } = harness.cards[0];
+
+  card.dispatch('pointerenter', { pointerType: 'mouse' });
+  card.dispatch('click', { target: card, pointerType: 'mouse' });
+  card.dispatch('pointerleave', { pointerType: 'mouse' });
+
+  assert.equal(stack.getAttribute('data-expanded'), null);
 });
 
 class FakeEventTarget {
@@ -211,7 +223,7 @@ test('one shared client owns a 220ms card transition and cleans up on preemption
 
   assert.equal(card.dispatch('pointerdown', { target: link }), false);
   assert.equal(stack.getAttribute('data-expanded'), null);
-  assert.equal(card.dispatch('click', { target: link }), false);
+  assert.equal(card.dispatch('click', { target: link, pointerType: 'touch' }), false);
   assert.equal(stack.getAttribute('data-expanded'), '');
   assert.equal(harness.context.coordinator.owner, 'card:1');
   assert.equal(harness.requested.size, 1);

@@ -80,7 +80,7 @@ export function extractMaxWidthMediaBlocks(css, maxWidth) {
       if (css[cursor] === '}') depth -= 1;
     }
 
-    if (depth === 0) blocks.push(css.slice(blockOpen + 1, cursor));
+    if (depth === 0) blocks.push(css.slice(blockOpen + 1, cursor - 1));
     index = cursor - 1;
   }
 
@@ -524,6 +524,7 @@ test('media block extraction keeps immediately adjacent matching blocks in order
     blocks.map((block) => block.match(/--marker:[^;}]+/)?.[0]),
     ['--marker:first', '--marker:second', '--marker:third'],
   );
+  for (const block of blocks) assert.doesNotMatch(block, /}\s*}$/);
 });
 
 test('approved portfolio photos are stored locally', async () => {
@@ -834,6 +835,19 @@ test('Notes and Contact keep their mobile crop, title, and contrast contracts', 
     notes,
     /\.notes__photo,\s*\.notes__content\s*\{\s*min-width:\s*0;/,
   );
+});
+
+test('compiled Notes actions create flow boxes for their vertical padding', async () => {
+  const css = await readBuiltCss();
+  const actions = findExactCssRule(
+    css,
+    /^\.notes__content(?:\[data-astro-cid-[^\]]+\])? \.btn(?:\[data-astro-cid-[^\]]+\])?$/,
+  );
+
+  assert.ok(actions, 'built CSS is missing the Notes action layout rule');
+  assert.match(actions, /display:\s*inline-flex/);
+  assert.match(actions, /align-items:\s*center/);
+  assert.match(actions, /justify-content:\s*center/);
 });
 
 test('experience chapter emphasizes systems, security, and product', async () => {
