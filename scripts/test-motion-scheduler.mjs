@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readdir, readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { createFrameScheduler } from '../src/scripts/motion/scheduler.mjs';
 
@@ -123,4 +124,40 @@ test('maps an idle event timestamp onto the next scheduler frame', () => {
   });
   frames.shift()(266);
   assert.deepEqual(elapsed, [16]);
+});
+
+test('motion sources have one frame owner and no global randomness or intervals', async () => {
+  const directory = new URL('../src/scripts/motion/', import.meta.url);
+  const names = (await readdir(directory)).filter((name) => name.endsWith('.mjs'));
+  const sources = new Map(
+    await Promise.all(names.map(async (name) => [
+      name,
+      await readFile(new URL(name, directory), 'utf8'),
+    ])),
+  );
+  for (const [name, source] of sources) {
+    assert.doesNotMatch(source, /\bsetInterval\s*\(/, `${name} uses setInterval`);
+    assert.doesNotMatch(source, /\bMath\.random\s*\(/, `${name} uses Math.random`);
+    if (name !== 'scheduler.mjs') {
+      assert.doesNotMatch(
+        source,
+        /\b(?:requestAnimationFrame|cancelAnimationFrame)\b/,
+        `${name} directly owns a frame API`,
+      );
+    }
+  }
+  for (const name of [
+    'pointer-effects.mjs',
+    'marquee.mjs',
+    'grid.mjs',
+    'card-stack.mjs',
+    'text-effects.mjs',
+    'navigation-wipe.mjs',
+  ]) {
+    assert.doesNotMatch(
+      sources.get(name),
+      /\b(?:Date|performance)\.now\s*\(/,
+      `${name} reads a global clock`,
+    );
+  }
 });

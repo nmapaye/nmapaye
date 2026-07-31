@@ -189,6 +189,59 @@ test('motion markup uses fixed decorative pools and canonical poster assets', as
   assert.doesNotMatch(html, /data-motion-grid[^>]*tabindex="0"/);
 });
 
+test('built motion delivery keeps one shared module, stable posters, and writing fallbacks', async () => {
+  const [html, css, writingHtml, articleHtml] = await Promise.all([
+    readHomepage(),
+    readBuiltCss(),
+    readFile(new URL('writing/index.html', outputRoot), 'utf8'),
+    readFile(new URL('writing/aurora-private-caffeine-tracking/index.html', outputRoot), 'utf8'),
+  ]);
+  const moduleTag = html.match(
+    /<script\b(?=[^>]*\btype="module")(?=[^>]*\bsrc=")[^>]*>/,
+  )?.[0];
+  assert.ok(moduleTag, 'homepage references one external motion module');
+  assert.equal(
+    (html.match(/<script\b(?=[^>]*\btype="module")(?=[^>]*\bsrc=")[^>]*>/g) ?? []).length,
+    1,
+  );
+  const modulePath = moduleTag.match(/\bsrc="([^"]+)"/)?.[1];
+  assert.ok(modulePath, 'homepage motion module has a source URL');
+  assert.equal((html.match(/data-motion-blob=/g) ?? []).length, 2);
+  assert.equal((html.match(/data-motion-sticker=/g) ?? []).length, 24);
+  assert.equal((html.match(/data-motion-particle=/g) ?? []).length, 8);
+  assert.equal((html.match(/data-motion-grid-tile=/g) ?? []).length, 16);
+  assert.equal((html.match(/data-motion-card=/g) ?? []).length, 4);
+  assert.equal((html.match(/data-motion-card-layer=/g) ?? []).length, 12);
+  assert.equal((html.match(/data-motion-shuffle(?:\s|=)/g) ?? []).length, 8);
+  assert.equal((html.match(/data-motion-shake(?:\s|=)/g) ?? []).length, 5);
+  assert.doesNotMatch(html, /data-motion-enhanced/);
+  assert.match(css, /@media \(forced-colors:\s*active\)/);
+  assert.match(css, /@media \(prefers-reduced-motion:\s*reduce\)/);
+  assert.match(css, /\.motion-layer[^}]*pointer-events:none/);
+  assert.match(css, /\.glitch-text__visual[^}]*pointer-events:none/);
+
+  const posterPaths = [
+    'images/project-posters/aurora.svg',
+    'images/project-posters/embnode.svg',
+    'images/project-posters/gitops.svg',
+    'images/project-posters/syslib.svg',
+  ];
+  await Promise.all(posterPaths.map((posterPath) =>
+    assert.doesNotReject(access(new URL(posterPath, outputRoot))),
+  ));
+  for (const posterPath of posterPaths) {
+    assert.ok(html.includes(`/${posterPath}`), `homepage references /${posterPath}`);
+  }
+
+  for (const writing of [writingHtml, articleHtml]) {
+    const writingModule = writing.match(
+      /<script\b(?=[^>]*\btype="module")(?=[^>]*\bsrc=")[^>]*>/,
+    )?.[0]?.match(/\bsrc="([^"]+)"/)?.[1];
+    assert.equal(writingModule, modulePath);
+    assert.doesNotMatch(writing, /project-posters|data-motion-kinetic="true"/);
+  }
+});
+
 test('built navigation wipe keeps the exact bounded accessibility sequence', async () => {
   const [html, css] = await Promise.all([readHomepage(), readBuiltCss()]);
   assert.equal((html.match(/data-motion-wipe-panel=/g) ?? []).length, 3);

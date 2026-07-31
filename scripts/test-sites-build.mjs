@@ -118,7 +118,25 @@ test('the staged Sites distribution serves real Astro pages and assets', async (
   const homepage = await worker.fetch(new Request('https://portfolio.example/'), { ASSETS: assets });
   const homepageHtml = await homepage.text();
   const cssPath = homepageHtml.match(/<link rel="stylesheet" href="([^"]+\.css)">/)?.[1];
+  const moduleTag = homepageHtml.match(
+    /<script\b(?=[^>]*\btype="module")(?=[^>]*\bsrc=")[^>]*>/,
+  )?.[0];
+  const modulePath = moduleTag?.match(/\bsrc="([^"]+)"/)?.[1];
   assert.ok(cssPath, 'homepage must reference a generated CSS asset');
+  assert.ok(modulePath, 'homepage must reference the generated motion module');
+
+  const [writingHtml, articleHtml] = await Promise.all([
+    readFile(resolve(clientRoot, 'writing/index.html'), 'utf8'),
+    readFile(resolve(clientRoot, 'writing/aurora-private-caffeine-tracking/index.html'), 'utf8'),
+  ]);
+  for (const writing of [writingHtml, articleHtml]) {
+    const writingModule = writing.match(
+      /<script\b(?=[^>]*\btype="module")(?=[^>]*\bsrc=")[^>]*>/,
+    )?.[0]?.match(/\bsrc="([^"]+)"/)?.[1];
+    assert.equal(writingModule, modulePath);
+    assert.doesNotMatch(writing, /project-posters/);
+    assert.match(writing, /data-motion-kinetic="false"/);
+  }
 
   for (const path of [
     '/',
@@ -126,7 +144,12 @@ test('the staged Sites distribution serves real Astro pages and assets', async (
     '/writing/',
     '/writing/aurora-private-caffeine-tracking/',
     '/writing/aurora-private-caffeine-tracking/?ref=portfolio',
+    modulePath,
     cssPath,
+    '/images/project-posters/aurora.svg',
+    '/images/project-posters/embnode.svg',
+    '/images/project-posters/gitops.svg',
+    '/images/project-posters/syslib.svg',
     '/favicon.ico',
     '/favicon-32.png',
     '/favicon-master.png',

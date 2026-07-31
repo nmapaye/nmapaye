@@ -40,6 +40,13 @@ npm test
 python3 scripts/test-resume.py
 ```
 
+For the motion unit and built-bundle contracts, run:
+
+```sh
+npm run test:motion
+npm run test:motion:bundle
+```
+
 To verify the OpenAI Sites distribution (including its packaged worker and real
 static assets), run:
 
