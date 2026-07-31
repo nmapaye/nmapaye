@@ -1,10 +1,17 @@
+.motion-root {
+  display: contents;
+}
+
 .motion-layer {
   position: fixed;
   inset: 0;
   z-index: 40;
   overflow: clip;
   pointer-events: none;
-  isolation: isolate;
+}
+
+.motion-layer--blend {
+  mix-blend-mode: difference;
 }
 
 .motion-wipe {
@@ -94,7 +101,6 @@
   aspect-ratio: 1;
   border-radius: 48% 52% 61% 39% / 43% 37% 63% 57%;
   background: var(--white);
-  mix-blend-mode: difference;
   transform: translate3d(var(--blob-x, -200vw), var(--blob-y, -200vh), 0)
     rotate(var(--blob-rotate, 0deg))
     scale(var(--blob-scale-x, 1), var(--blob-scale-y, 1));

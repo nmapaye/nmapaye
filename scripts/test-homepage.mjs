@@ -213,6 +213,20 @@ test('motion markup uses fixed decorative pools and canonical poster assets', as
   assert.doesNotMatch(html, /data-motion-grid[^>]*tabindex="0"/);
 });
 
+test('difference blobs blend at their own page-layer boundary', async () => {
+  const [html, builtCss] = await Promise.all([readHomepage(), readBuiltCss()]);
+  const root = findExactCssRule(builtCss, /^\.motion-root$/);
+  const blendLayer = findExactCssRule(builtCss, /^\.motion-layer--blend$/);
+  const blob = findExactCssRule(builtCss, /^\[data-motion-blob\]$/);
+
+  assert.match(html, /class="motion-root"[^>]*data-motion-root/);
+  assert.equal((html.match(/class="motion-layer motion-layer--blend"/g) ?? []).length, 1);
+  assert.equal((html.match(/class="motion-layer motion-layer--effects"/g) ?? []).length, 1);
+  assert.match(root ?? '', /display:\s*contents/);
+  assert.match(blendLayer ?? '', /mix-blend-mode:\s*difference/);
+  assert.doesNotMatch(blob ?? '', /mix-blend-mode/);
+});
+
 test('built motion delivery keeps one shared module, stable posters, and writing fallbacks', async () => {
   const [html, css, writingHtml, articleHtml] = await Promise.all([
     readHomepage(),
