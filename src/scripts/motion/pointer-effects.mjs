@@ -108,11 +108,9 @@ export function mountPointerEffects(context) {
         clearStickers();
       }
       state.stickers = state.stickers
-        .map((item) => ({ ...item, remaining: item.remaining - elapsed }))
-        .filter((item) => item.remaining > 0);
+        .filter((item) => timestamp - item.startedAt < 900);
       state.particles = state.particles
-        .map((item) => ({ ...item, remaining: item.remaining - elapsed }))
-        .filter((item) => item.remaining > 0);
+        .filter((item) => timestamp - item.startedAt < item.duration);
       if (state.particles.length === 0 && state.burstOwner) cancelBurst();
 
       let blobMoving = false;
@@ -155,7 +153,7 @@ export function mountPointerEffects(context) {
         const item = state.stickers.find((entry) => entry.index === index);
         node.toggleAttribute('data-active', Boolean(item));
         if (!item) return;
-        const progress = 1 - item.remaining / 900;
+        const progress = Math.max(0, Math.min(1, (timestamp - item.startedAt) / 900));
         node.style.setProperty('--sticker-x', `${item.x}px`);
         node.style.setProperty('--sticker-y', `${item.y + progress * 72}px`);
         node.style.setProperty('--sticker-rotate', `${item.rotation}deg`);
@@ -165,7 +163,10 @@ export function mountPointerEffects(context) {
         const item = state.particles[index];
         node.toggleAttribute('data-active', Boolean(item));
         if (!item) return;
-        const progress = 1 - item.remaining / item.duration;
+        const progress = Math.max(
+          0,
+          Math.min(1, (timestamp - item.startedAt) / item.duration),
+        );
         node.textContent = item.symbol;
         node.style.setProperty('--particle-x', `${item.originX + item.x * progress}px`);
         node.style.setProperty('--particle-y', `${item.originY + item.y * progress}px`);
@@ -275,7 +276,7 @@ export function mountPointerEffects(context) {
           x: sample.clientX,
           y: sample.clientY,
           rotation: (context.random() - 0.5) * 24,
-          remaining: 900,
+          startedAt: context.scheduler.now(context.clock()),
         });
         state.lastSticker = nextSticker;
       }
@@ -313,6 +314,7 @@ export function mountPointerEffects(context) {
     state.burstOwner = owner;
     const rect = target.getBoundingClientRect();
     const lifetime = target.closest('[data-motion-shake-related], [data-motion-card]') ? 100 : 300;
+    const startedAt = context.scheduler.now(context.clock());
     state.triggerCount += 1;
     state.particles = createBurst({
       seed: 0x4e4d3031,
@@ -324,7 +326,7 @@ export function mountPointerEffects(context) {
       originX: rect.left + rect.width / 2,
       originY: rect.top + rect.height / 2,
       duration: lifetime,
-      remaining: item.expiresAt,
+      startedAt,
     }));
     request();
   }

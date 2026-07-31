@@ -298,6 +298,86 @@ test('burst lifetime begins at the trigger timestamp between scheduler frames', 
   clock = 301;
 });
 
+test('a retriggered burst receives its full lifetime from the new trigger', () => {
+  const frames = [];
+  const scheduler = createFrameScheduler({
+    requestFrame(callback) { frames.push(callback); return frames.length; },
+    cancelFrame() {},
+    maxDelta: 50,
+  });
+  let clock = 0;
+  const harness = createPointerHarness({ scheduler, clock: () => clock });
+  const card = new FakeNode({ attrs: { 'data-motion-card': '' } });
+  const link = new FakeNode({
+    attrs: { 'data-motion-burst': '', href: '/work' },
+    parent: card,
+  });
+
+  harness.dispatch('pointerover', { target: link, relatedTarget: null });
+  frames.shift()(0);
+
+  clock = 50;
+  harness.dispatch('pointerdown', { target: link });
+  frames.shift()(50);
+  frames.shift()(100);
+
+  assert.equal(
+    harness.particles.some((node) => node.attrs.has('data-active')),
+    true,
+  );
+
+  frames.shift()(150);
+  assert.equal(
+    harness.particles.some((node) => node.attrs.has('data-active')),
+    false,
+  );
+});
+
+test('a new sticker receives its full lifetime while the controller is active', () => {
+  const frames = [];
+  const scheduler = createFrameScheduler({
+    requestFrame(callback) { frames.push(callback); return frames.length; },
+    cancelFrame() {},
+    maxDelta: 50,
+  });
+  let clock = 0;
+  const harness = createPointerHarness({ scheduler, clock: () => clock });
+
+  harness.dispatch('pointermove', {
+    target: harness.showcase,
+    clientX: 0,
+    clientY: 0,
+    timeStamp: 0,
+  });
+  frames.shift()(0);
+
+  clock = 60;
+  harness.dispatch('pointermove', {
+    target: harness.showcase,
+    clientX: 60,
+    clientY: 0,
+    timeStamp: 60,
+  });
+  frames.shift()(60);
+
+  clock = 120;
+  harness.dispatch('pointermove', {
+    target: harness.showcase,
+    clientX: 120,
+    clientY: 0,
+    timeStamp: 120,
+  });
+  frames.shift()(120);
+
+  for (let rawTime = 170; rawTime <= 970; rawTime += 50) {
+    frames.shift()(rawTime);
+  }
+  assert.equal(harness.stickers[1].attrs.has('data-active'), true);
+
+  frames.shift()(1020);
+  assert.equal(harness.stickers[1].attrs.has('data-active'), false);
+});
+
 test('only kinetic roots register the pointer-effects controller by default', () => {
   const kinetic = createPointerHarness({ mount: false, kinetic: true });
   const staticRoot = createPointerHarness({ mount: false, kinetic: false });
