@@ -96,6 +96,52 @@ test('import parser handles templates, regexes, and escaped module specifiers', 
   ]);
 });
 
+test('import parser ignores regex literals after expression-prefix keywords', () => {
+  const source = [
+    'function returned(){ return /import{a}from"return.js"/giu; }',
+    'function thrown(){ throw /export{a}from"throw.js"/; }',
+    'switch (value) { case /import"case.js"/: break; }',
+    'function* yielded(){ yield /export{a}from"yield.js"/; }',
+    'async function awaited(){ await /import"await.js"/; }',
+    'const prefixed = typeof /export{a}from"typeof.js"/;',
+    'const classified = void /[\\/]export{a}from"class.js"\\//gim;',
+    'const quotient = value / divisor / 2;',
+    'import "./real.js";',
+  ].join('\n');
+
+  assert.deepEqual(importedScripts(source), ['./real.js']);
+});
+
+test('import parser fully cooks valid specifier escapes and rejects malformed escapes', () => {
+  const source = [
+    'import "./hex\\x2ejs";',
+    'import "./unicode\\u002ejs";',
+    'import "./codepoint\\u{2e}js";',
+    'import "./standard\\tname.js";',
+    'import "./quote\\"name.js";',
+    'import "./slash\\\\name.js";',
+    'import "./line\\\r\ncontinued.js";',
+  ].join('\n');
+
+  assert.deepEqual(importedScripts(source), [
+    './hex.js',
+    './unicode.js',
+    './codepoint.js',
+    './standard\tname.js',
+    './quote"name.js',
+    './slash\\name.js',
+    './linecontinued.js',
+  ]);
+  assert.throws(
+    () => importedScripts('import "./bad\\u00zz.js";'),
+    /invalid JavaScript string escape/,
+  );
+  assert.throws(
+    () => importedScripts('import "./trailing\\'),
+    /invalid JavaScript string escape/,
+  );
+});
+
 test('graph strips query/hash paths and rejects minified non-local imports', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'motion-bundle-'));
   try {

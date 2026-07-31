@@ -1,22 +1,35 @@
 function cookEscape(source, index) {
   const character = source[index];
+  if (character === undefined) throw new SyntaxError('invalid JavaScript string escape');
+  if (character === '\r') {
+    return { value: '', next: source[index + 1] === '\n' ? index + 2 : index + 1 };
+  }
+  if (character === '\n') return { value: '', next: index + 1 };
+  if (character === 'x') {
+    const hex = source.slice(index + 1, index + 3);
+    if (!/^[\da-f]{2}$/i.test(hex)) throw new SyntaxError('invalid JavaScript string escape');
+    return { value: String.fromCodePoint(Number.parseInt(hex, 16)), next: index + 3 };
+  }
   if (character === 'u') {
     if (source[index + 1] === '{') {
       const end = source.indexOf('}', index + 2);
-      if (end !== -1) {
-        const codePoint = Number.parseInt(source.slice(index + 2, end), 16);
-        if (Number.isFinite(codePoint)) {
+      const hex = end === -1 ? '' : source.slice(index + 2, end);
+      if (/^[\da-f]+$/i.test(hex)) {
+        const codePoint = Number.parseInt(hex, 16);
+        if (codePoint <= 0x10ffff) {
           return { value: String.fromCodePoint(codePoint), next: end + 1 };
         }
       }
     } else {
-      const codePoint = Number.parseInt(source.slice(index + 1, index + 5), 16);
-      if (Number.isFinite(codePoint)) {
+      const hex = source.slice(index + 1, index + 5);
+      if (/^[\da-f]{4}$/i.test(hex)) {
+        const codePoint = Number.parseInt(hex, 16);
         return { value: String.fromCodePoint(codePoint), next: index + 5 };
       }
     }
+    throw new SyntaxError('invalid JavaScript string escape');
   }
-  const escapes = { b: '\b', f: '\f', n: '\n', r: '\r', t: '\t', v: '\v' };
+  const escapes = { 0: '\0', b: '\b', f: '\f', n: '\n', r: '\r', t: '\t', v: '\v' };
   return { value: escapes[character] ?? character, next: index + 1 };
 }
 
@@ -41,7 +54,10 @@ function readString(source, index) {
 
 function canStartRegex(tokens) {
   const previous = tokens.at(-1);
-  return !previous || (
+  return !previous || previous.type === 'word' && [
+    'await', 'case', 'delete', 'do', 'else', 'in', 'instanceof', 'new',
+    'of', 'return', 'throw', 'typeof', 'void', 'yield',
+  ].includes(previous.value) || (
     previous.type === 'punctuation' &&
     '([{:;,=!?&|+-*%^~<>'.includes(previous.value)
   );

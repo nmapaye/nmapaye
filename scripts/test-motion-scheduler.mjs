@@ -48,20 +48,42 @@ function hasMemberReference(tokens, object, property) {
   for (let index = 0; index < tokens.length; index += 1) {
     if (tokens[index].value === object && memberFollows(tokens, index, property)) return true;
     if (tokens[index].value !== '{') continue;
-    let depth = 1;
-    let cursor = index + 1;
-    for (; cursor < tokens.length && depth > 0; cursor += 1) {
-      if (tokens[cursor].value === '{') depth += 1;
-      if (tokens[cursor].value === '}') depth -= 1;
-    }
+    const cursor = matchingBrace(tokens, index);
     if (
-      depth === 0 &&
-      tokens[cursor]?.value === '=' &&
-      tokens[cursor + 1]?.value === object &&
-      tokens.slice(index + 1, cursor - 1).some((token) => token.value === property)
+      cursor !== -1 &&
+      tokens[cursor + 1]?.value === '=' &&
+      tokens[cursor + 2]?.value === object &&
+      hasTopLevelDestructuredProperty(tokens, index + 1, cursor, property)
     ) {
       return true;
     }
+  }
+  return false;
+}
+
+function matchingBrace(tokens, start) {
+  let depth = 1;
+  for (let index = start + 1; index < tokens.length; index += 1) {
+    if (tokens[index].value === '{') depth += 1;
+    if (tokens[index].value === '}') depth -= 1;
+    if (depth === 0) return index;
+  }
+  return -1;
+}
+
+function hasTopLevelDestructuredProperty(tokens, start, end, property) {
+  let entryStart = start;
+  let depth = 0;
+  for (let index = start; index <= end; index += 1) {
+    const token = tokens[index];
+    if (index === end || (depth === 0 && token.value === ',')) {
+      if (tokens[entryStart]?.type === 'word' && tokens[entryStart].value === property) {
+        return true;
+      }
+      entryStart = index + 1;
+    }
+    if (token.value === '{' || token.value === '[' || token.value === '(') depth += 1;
+    if (token.value === '}' || token.value === ']' || token.value === ')') depth -= 1;
   }
   return false;
 }
@@ -143,6 +165,40 @@ test('runtime ownership scan handles expressions and valid member syntax without
     [],
     'regex literals must not create runtime ownership violations',
   );
+});
+
+test('runtime ownership scan ignores regexes after expression-prefix keywords', () => {
+  const source = [
+    'function returned(){ return /Math.random setInterval/giu; }',
+    'function thrown(){ throw /Date.now requestAnimationFrame/; }',
+    'switch (value) { case /performance.now cancelAnimationFrame/: break; }',
+    'function* yielded(){ yield /Math.random/; }',
+    'async function awaited(){ await /setInterval/; }',
+    'const prefixed = typeof /Date.now/;',
+    'const classified = void /[\\/]Math.random\\//gim;',
+    'const quotient = value / divisor / 2;',
+  ].join('\n');
+
+  assert.deepEqual(runtimeOwnershipViolations('pointer-effects.mjs', source), []);
+});
+
+test('runtime ownership scan selects only top-level destructured property keys', () => {
+  for (const source of [
+    'const { value: random } = Math;',
+    'const { nested: { random } } = Math;',
+    'const { value = random } = Math;',
+    'const { [key]: random } = Math;',
+    'const { nested = { random } } = Math;',
+  ]) {
+    assert.deepEqual(runtimeOwnershipViolations('pointer-effects.mjs', source), [], source);
+  }
+  for (const source of [
+    'const { random } = Math;',
+    'const { random: renamed } = Math;',
+    'const { random = fallback } = Math;',
+  ]) {
+    assert.deepEqual(runtimeOwnershipViolations('pointer-effects.mjs', source), ['Math.random'], source);
+  }
 });
 
 test('coalesces controllers into one frame and stops when idle', () => {
