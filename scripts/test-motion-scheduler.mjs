@@ -51,14 +51,31 @@ function hasMemberReference(tokens, object, property) {
     const cursor = matchingBrace(tokens, index);
     if (
       cursor !== -1 &&
-      tokens[cursor + 1]?.value === '=' &&
-      tokens[cursor + 2]?.value === object &&
+      rightHandIsObject(tokens, cursor, object) &&
       hasTopLevelDestructuredProperty(tokens, index + 1, cursor, property)
     ) {
       return true;
     }
   }
   return false;
+}
+
+function rightHandIsObject(tokens, closingBrace, object) {
+  if (tokens[closingBrace + 1]?.value !== '=') return false;
+  let cursor = closingBrace + 2;
+  let parentheses = 0;
+  while (tokens[cursor]?.value === '(') {
+    parentheses += 1;
+    cursor += 1;
+  }
+  if (tokens[cursor]?.value !== object) return false;
+  cursor += 1;
+  while (parentheses > 0) {
+    if (tokens[cursor]?.value !== ')') return false;
+    parentheses -= 1;
+    cursor += 1;
+  }
+  return true;
 }
 
 function matchingBrace(tokens, start) {
@@ -77,7 +94,10 @@ function hasTopLevelDestructuredProperty(tokens, start, end, property) {
   for (let index = start; index <= end; index += 1) {
     const token = tokens[index];
     if (index === end || (depth === 0 && token.value === ',')) {
-      if (tokens[entryStart]?.type === 'word' && tokens[entryStart].value === property) {
+      if (
+        ['word', 'string'].includes(tokens[entryStart]?.type) &&
+        tokens[entryStart].value === property
+      ) {
         return true;
       }
       entryStart = index + 1;
@@ -176,7 +196,27 @@ test('runtime ownership scan ignores regexes after expression-prefix keywords', 
     'async function awaited(){ await /setInterval/; }',
     'const prefixed = typeof /Date.now/;',
     'const classified = void /[\\/]Math.random\\//gim;',
-    'const quotient = value / divisor / 2;',
+    'const quotient = value / Math.random / 2;',
+  ].join('\n');
+
+  assert.deepEqual(runtimeOwnershipViolations('pointer-effects.mjs', source), ['Math.random']);
+});
+
+test('runtime ownership scan resets expression context at tagged template interpolations', () => {
+  assert.deepEqual(
+    runtimeOwnershipViolations('pointer-effects.mjs', 'const tagged = tag`${/Date\\.now/}`;'),
+    [],
+  );
+  assert.deepEqual(
+    runtimeOwnershipViolations('pointer-effects.mjs', 'const tagged = tag`${/Math\\.random/.test(value), Math.random}`;'),
+    ['Math.random'],
+  );
+});
+
+test('runtime ownership scan ignores regex literals after default and extends', () => {
+  const source = [
+    'export default /Math\\.random/;',
+    'class C extends /Date\\.now/.constructor {}',
   ].join('\n');
 
   assert.deepEqual(runtimeOwnershipViolations('pointer-effects.mjs', source), []);
@@ -196,6 +236,9 @@ test('runtime ownership scan selects only top-level destructured property keys',
     'const { random } = Math;',
     'const { random: renamed } = Math;',
     'const { random = fallback } = Math;',
+    'const { "random": choose } = Math;',
+    "const { 'random': choose } = Math;",
+    'const { random } = (Math);',
   ]) {
     assert.deepEqual(runtimeOwnershipViolations('pointer-effects.mjs', source), ['Math.random'], source);
   }

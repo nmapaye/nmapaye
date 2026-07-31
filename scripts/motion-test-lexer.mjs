@@ -52,11 +52,11 @@ function readString(source, index) {
   return { value, next: index };
 }
 
-function canStartRegex(tokens) {
+function canStartRegex(tokens, expressionStart) {
   const previous = tokens.at(-1);
-  return !previous || previous.type === 'word' && [
-    'await', 'case', 'delete', 'do', 'else', 'in', 'instanceof', 'new',
-    'of', 'return', 'throw', 'typeof', 'void', 'yield',
+  return expressionStart || !previous || previous.type === 'word' && [
+    'await', 'case', 'default', 'delete', 'do', 'else', 'extends', 'in',
+    'instanceof', 'new', 'of', 'return', 'throw', 'typeof', 'void', 'yield',
   ].includes(previous.value) || (
     previous.type === 'punctuation' &&
     '([{:;,=!?&|+-*%^~<>'.includes(previous.value)
@@ -84,9 +84,10 @@ function skipRegex(source, index) {
   return index;
 }
 
-function lex(source, start, tokens, stopsAtTemplateBrace = false) {
+function lex(source, start, tokens, stopsAtTemplateBrace = false, startsExpression = false) {
   let index = start;
   let braceDepth = 0;
+  let expressionStart = startsExpression;
   while (index < source.length) {
     const character = source[index];
     if (/\s/.test(character)) {
@@ -102,14 +103,18 @@ function lex(source, start, tokens, stopsAtTemplateBrace = false) {
       const string = readString(source, index);
       tokens.push({ type: 'string', value: string.value });
       index = string.next;
+      expressionStart = false;
     } else if (character === '`') {
       index = lexTemplate(source, index + 1, tokens);
-    } else if (character === '/' && canStartRegex(tokens)) {
+      expressionStart = false;
+    } else if (character === '/' && canStartRegex(tokens, expressionStart)) {
       index = skipRegex(source, index);
+      expressionStart = false;
     } else if (/[A-Za-z_$]/.test(character)) {
       const wordStart = index;
       while (/[\w$]/.test(source[index] ?? '')) index += 1;
       tokens.push({ type: 'word', value: source.slice(wordStart, index) });
+      expressionStart = false;
     } else if (character === '}' && stopsAtTemplateBrace && braceDepth === 0) {
       return index + 1;
     } else {
@@ -117,6 +122,7 @@ function lex(source, start, tokens, stopsAtTemplateBrace = false) {
       if (stopsAtTemplateBrace && character === '{') braceDepth += 1;
       if (stopsAtTemplateBrace && character === '}') braceDepth -= 1;
       index += 1;
+      expressionStart = false;
     }
   }
   return index;
@@ -127,7 +133,7 @@ function lexTemplate(source, index, tokens) {
     if (source[index] === '\\') index += 2;
     else if (source[index] === '`') return index + 1;
     else if (source[index] === '$' && source[index + 1] === '{') {
-      index = lex(source, index + 2, tokens, true);
+      index = lex(source, index + 2, tokens, true, true);
     } else index += 1;
   }
   return index;

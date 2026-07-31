@@ -86,7 +86,7 @@ test('import parser captures minified dependencies without parsing comments or s
 test('import parser handles templates, regexes, and escaped module specifiers', () => {
   const source = [
     'const template = `raw import "./raw.js"; ${import("./dynamic.js")}`;',
-    'const ignored = /export{a}from"external.js"/;',
+    'const ignored = /export\\{a\\}from"external.js"/;',
     'import "./chunk\\u002ejs";',
   ].join('\n');
 
@@ -98,14 +98,30 @@ test('import parser handles templates, regexes, and escaped module specifiers', 
 
 test('import parser ignores regex literals after expression-prefix keywords', () => {
   const source = [
-    'function returned(){ return /import{a}from"return.js"/giu; }',
-    'function thrown(){ throw /export{a}from"throw.js"/; }',
+    'function returned(){ return /import\\{a\\}from"return.js"/giu; }',
+    'function thrown(){ throw /export\\{a\\}from"throw.js"/; }',
     'switch (value) { case /import"case.js"/: break; }',
-    'function* yielded(){ yield /export{a}from"yield.js"/; }',
+    'function* yielded(){ yield /export\\{a\\}from"yield.js"/; }',
     'async function awaited(){ await /import"await.js"/; }',
-    'const prefixed = typeof /export{a}from"typeof.js"/;',
-    'const classified = void /[\\/]export{a}from"class.js"\\//gim;',
-    'const quotient = value / divisor / 2;',
+    'const prefixed = typeof /export\\{a\\}from"typeof.js"/;',
+    'const classified = void /[\\/]export\\{a\\}from"class.js"\\//gim;',
+    'const quotient = value / import("./division.js") / 2;',
+    'import "./real.js";',
+  ].join('\n');
+
+  assert.deepEqual(importedScripts(source), ['./division.js', './real.js']);
+});
+
+test('import parser resets expression context at tagged template interpolations', () => {
+  const source = 'const tagged = tag`${/import\\"fake.js\\"/giu.test(value), import("./real.js")} ${import("./later.js")}`;';
+
+  assert.deepEqual(importedScripts(source), ['./real.js', './later.js']);
+});
+
+test('import parser ignores regex literals after default and extends', () => {
+  const source = [
+    'export default /import\\"default.js\\"/giu;',
+    'class C extends /import\\"extends.js\\"/.constructor {}',
     'import "./real.js";',
   ].join('\n');
 
