@@ -2,16 +2,17 @@ import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { createFrameScheduler } from '../src/scripts/motion/scheduler.mjs';
+import { tokenizeJavaScript } from './motion-test-lexer.mjs';
 
 function runtimeOwnershipViolations(name, source) {
-  const tokens = codeTokens(source);
+  const tokens = tokenizeJavaScript(source);
   const violations = [];
-  if (hasIdentifier(tokens, 'setInterval')) violations.push('setInterval');
+  if (hasNamedMemberReference(tokens, 'setInterval')) violations.push('setInterval');
   if (hasMemberReference(tokens, 'Math', 'random')) violations.push('Math.random');
   if (
     name !== 'scheduler.mjs' &&
     ['requestAnimationFrame', 'cancelAnimationFrame']
-      .some((name) => hasIdentifier(tokens, name))
+      .some((name) => hasNamedMemberReference(tokens, name))
   ) violations.push('frame API');
   if (
     [
@@ -30,61 +31,54 @@ function runtimeOwnershipViolations(name, source) {
   return violations;
 }
 
-function codeTokens(source) {
-  const tokens = [];
-  for (let index = 0; index < source.length;) {
-    const character = source[index];
-    if (/\s/.test(character)) {
-      index += 1;
-    } else if (source.startsWith('//', index)) {
-      index = source.indexOf('\n', index + 2);
-      if (index === -1) break;
-    } else if (source.startsWith('/*', index)) {
-      index = source.indexOf('*/', index + 2);
-      if (index === -1) break;
-      index += 2;
-    } else if (character === '"' || character === "'" || character === '`') {
-      const quote = character;
-      index += 1;
-      while (index < source.length && source[index] !== quote) {
-        index += source[index] === '\\' ? 2 : 1;
-      }
-      index += 1;
-    } else if (/[A-Za-z_$]/.test(character)) {
-      const start = index;
-      while (/[\w$]/.test(source[index] ?? '')) index += 1;
-      tokens.push({ type: 'word', value: source.slice(start, index) });
-    } else {
-      tokens.push({ type: 'punctuation', value: character });
-      index += 1;
-    }
-  }
-  return tokens;
-}
-
 function hasIdentifier(tokens, expected) {
   return tokens.some((token) => token.type === 'word' && token.value === expected);
 }
 
+function hasNamedMemberReference(tokens, property) {
+  return hasIdentifier(tokens, property) || tokens.some((token, index) => (
+    token.value === '[' &&
+    tokens[index + 1]?.type === 'string' &&
+    tokens[index + 1].value === property &&
+    tokens[index + 2]?.value === ']'
+  ));
+}
+
 function hasMemberReference(tokens, object, property) {
   for (let index = 0; index < tokens.length; index += 1) {
+    if (tokens[index].value === object && memberFollows(tokens, index, property)) return true;
+    if (tokens[index].value !== '{') continue;
+    let depth = 1;
+    let cursor = index + 1;
+    for (; cursor < tokens.length && depth > 0; cursor += 1) {
+      if (tokens[cursor].value === '{') depth += 1;
+      if (tokens[cursor].value === '}') depth -= 1;
+    }
     if (
-      tokens[index].value === object &&
-      tokens[index + 1]?.value === '.' &&
-      tokens[index + 2]?.value === property
-    ) return true;
-    if (tokens[index].value !== object || tokens[index - 1]?.value !== '=') continue;
-    for (let cursor = index - 2; cursor >= 0; cursor -= 1) {
-      if (tokens[cursor].value === ';') break;
-      if (tokens[cursor].value === '{') {
-        if (tokens.slice(cursor + 1, index - 1).some((token) => token.value === property)) {
-          return true;
-        }
-        break;
-      }
+      depth === 0 &&
+      tokens[cursor]?.value === '=' &&
+      tokens[cursor + 1]?.value === object &&
+      tokens.slice(index + 1, cursor - 1).some((token) => token.value === property)
+    ) {
+      return true;
     }
   }
   return false;
+}
+
+function memberFollows(tokens, index, property) {
+  let cursor = index + 1;
+  while (tokens[cursor]?.value === ')') cursor += 1;
+  if (tokens[cursor]?.value === '?') cursor += 1;
+  if (tokens[cursor]?.value === '.') {
+    return tokens[cursor + 1]?.value === property;
+  }
+  return (
+    tokens[cursor]?.value === '[' &&
+    tokens[cursor + 1]?.type === 'string' &&
+    tokens[cursor + 1].value === property &&
+    tokens[cursor + 2]?.value === ']'
+  );
 }
 
 test('runtime ownership scan catches references while ignoring comments and literals', () => {
@@ -113,6 +107,41 @@ test('runtime ownership scan catches references while ignoring comments and lite
       '// requestAnimationFrame; Math.random();\nconst literal = "cancelAnimationFrame Date.now setInterval";',
     ),
     [],
+  );
+});
+
+test('runtime ownership scan handles expressions and valid member syntax without crossing declarations', () => {
+  for (const { title, source, violation } of [
+    { title: 'template randomness', source: '`${Math.random}`', violation: 'Math.random' },
+    { title: 'template interval', source: '`${setInterval}`', violation: 'setInterval' },
+    { title: 'optional randomness', source: 'Math?.random', violation: 'Math.random' },
+    { title: 'parenthesized randomness', source: '(Math).random', violation: 'Math.random' },
+    { title: 'optional clock', source: 'Date?.now', violation: 'global clock' },
+    { title: 'bracket clock', source: 'performance["now"]', violation: 'global clock' },
+    { title: 'optional frame API', source: 'window?.requestAnimationFrame', violation: 'frame API' },
+    { title: 'bracket frame API', source: 'window["cancelAnimationFrame"]', violation: 'frame API' },
+    { title: 'bracket interval', source: 'globalThis["setInterval"]', violation: 'setInterval' },
+  ]) {
+    assert.ok(
+      runtimeOwnershipViolations('pointer-effects.mjs', source).includes(violation),
+      `scanner misses ${title}`,
+    );
+  }
+  assert.deepEqual(
+    runtimeOwnershipViolations(
+      'pointer-effects.mjs',
+      'const { random } = source\nconst value = Math',
+    ),
+    [],
+    'destructuring must not scan across an omitted semicolon',
+  );
+  assert.deepEqual(
+    runtimeOwnershipViolations(
+      'pointer-effects.mjs',
+      '/Math.random Date.now requestAnimationFrame setInterval/',
+    ),
+    [],
+    'regex literals must not create runtime ownership violations',
   );
 });
 
