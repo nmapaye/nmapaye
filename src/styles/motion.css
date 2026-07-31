@@ -7,6 +7,36 @@
   isolation: isolate;
 }
 
+.motion-wipe {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  overflow: hidden;
+}
+
+[data-motion-wipe-panel] {
+  inset: 0;
+  transform: translate3d(-105%, 0, 0);
+}
+
+[data-motion-wipe-panel="red"] { background: var(--red); }
+[data-motion-wipe-panel="yellow"] { background: var(--yellow); }
+[data-motion-wipe-panel="green"] { background: var(--green); }
+
+.motion-wipe[data-active] [data-motion-wipe-panel] {
+  opacity: 1;
+  transition: transform 180ms steps(4, end);
+  transform: translate3d(0, 0, 0);
+}
+
+.motion-wipe[data-active] [data-motion-wipe-panel="yellow"] {
+  transition-delay: 45ms;
+}
+
+.motion-wipe[data-active] [data-motion-wipe-panel="green"] {
+  transition-delay: 90ms;
+}
+
 [data-motion-shake] {
   transform: translate3d(var(--shake-x, 0), var(--shake-y, 0), 0);
   text-shadow:

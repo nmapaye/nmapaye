@@ -7,9 +7,26 @@ import { mountMarquee } from './marquee.mjs';
 import { mountGrid } from './grid.mjs';
 import { mountCardStacks } from './card-stack.mjs';
 import { mountTextEffects } from './text-effects.mjs';
+import { mountNavigationWipe } from './navigation-wipe.mjs';
 import { observeMotionPolicy } from './policy.mjs';
 
 const mounts = new WeakMap();
+const kineticFactories = [
+  mountPointerEffects,
+  mountMarquee,
+  mountGrid,
+  mountCardStacks,
+  mountTextEffects,
+];
+
+function defaultFactories(root) {
+  return [
+    mountNavigationWipe,
+    ...(root.getAttribute?.('data-motion-kinetic') === 'true'
+      ? kineticFactories
+      : []),
+  ];
+}
 
 export function createSeededRandom(seed) {
   let state = (seed >>> 0) || 0x9e3779b9;
@@ -126,7 +143,6 @@ export function initializeMotion(root, environment = {}) {
   };
   const controllers = [];
   let navigationLocked = false;
-  let unlockNavigation = null;
   let latestRawPolicy = null;
   const applyNavigationLock = (policy) => (
     navigationLocked
@@ -141,7 +157,11 @@ export function initializeMotion(root, environment = {}) {
       : { ...policy, navigationActive: false }
   );
   function applyPolicy(policy) {
-    const wasHidden = context.policy?.hidden;
+    const wasInactive = context.policy && (
+      context.policy.hidden
+      || !context.policy.motionAllowed
+      || context.policy.navigationActive
+    );
     latestRawPolicy = policy;
     const effectivePolicy = applyNavigationLock(policy);
     context.policy = effectivePolicy;
@@ -154,9 +174,11 @@ export function initializeMotion(root, environment = {}) {
         context.onError(error, controller);
       }
     }
-    const settledPolicy = applyNavigationLock(latestRawPolicy);
-    context.policy = settledPolicy;
-    if (effectivePolicy.navigationActive && !settledPolicy.navigationActive) {
+    const settledPolicy = applyNavigationLock(latestRawPolicy ?? effectivePolicy);
+    if (
+      effectivePolicy.navigationActive
+      && !settledPolicy.navigationActive
+    ) {
       for (const controller of controllers) {
         if (controller.navigation) continue;
         try {
@@ -166,29 +188,26 @@ export function initializeMotion(root, environment = {}) {
         }
       }
     }
-    if (!settledPolicy.motionAllowed) context.coordinator.cancelCurrent();
-    if (settledPolicy.hidden || settledPolicy.navigationActive) {
+    context.policy = settledPolicy;
+    if (!settledPolicy.motionAllowed) {
+      try {
+        context.coordinator.cancelCurrent();
+      } catch (error) {
+        context.onError(error);
+      }
+    }
+    if (
+      settledPolicy.hidden
+      || !settledPolicy.motionAllowed
+      || settledPolicy.navigationActive
+    ) {
       scheduler.cancelAll();
       scheduler.suspend();
     } else {
-      if (wasHidden) scheduler.resetTiming();
+      if (wasInactive) scheduler.resetTiming();
       scheduler.resume();
-      if (!settledPolicy.motionAllowed) scheduler.cancelAll();
     }
   }
-  context.lockForNavigation = () => {
-    if (navigationLocked) return unlockNavigation;
-    navigationLocked = true;
-    let unlocked = false;
-    unlockNavigation = () => {
-      if (unlocked) return;
-      unlocked = true;
-      navigationLocked = false;
-      applyPolicy(latestRawPolicy ?? context.policy);
-    };
-    applyPolicy(latestRawPolicy ?? context.policy);
-    return unlockNavigation;
-  };
   const observePolicy = environment.observePolicy ?? observeMotionPolicy;
   const observedPolicy = observePolicy({
     window: browserWindow,
@@ -202,27 +221,137 @@ export function initializeMotion(root, environment = {}) {
   }
   context.refreshPolicy =
     observedPolicy?.refresh?.bind(observedPolicy) ?? (() => context.policy);
-  const controllerFactories = environment.controllerFactories ?? (
-    root.getAttribute?.('data-motion-kinetic') === 'true'
-      ? [mountPointerEffects, mountTextEffects, mountMarquee, mountGrid, mountCardStacks]
-      : []
-  );
-  for (const factory of controllerFactories) {
+
+  context.lockForNavigation = () => {
+    if (navigationLocked) return () => {};
+    navigationLocked = true;
+    context.policy = applyNavigationLock(context.policy);
+    for (const controller of controllers) {
+      if (controller.navigation) continue;
+      try {
+        controller.setPolicy?.(context.policy);
+      } catch (error) {
+        context.onError(error, controller);
+      }
+    }
+    try {
+      context.coordinator.cancelCurrent();
+    } catch (error) {
+      context.onError(error);
+    }
+    scheduler.cancelAll();
+    scheduler.suspend();
+    let unlocked = false;
+    return () => {
+      if (unlocked) return;
+      unlocked = true;
+      navigationLocked = false;
+      context.policy = applyNavigationLock(latestRawPolicy ?? context.policy);
+      scheduler.resetTiming();
+      if (context.policy.motionAllowed && !context.policy.hidden) scheduler.resume();
+      else scheduler.suspend();
+      for (const controller of controllers) {
+        if (controller.navigation) continue;
+        try {
+          controller.setPolicy?.(context.policy);
+        } catch (error) {
+          context.onError(error, controller);
+        }
+      }
+    };
+  };
+
+  const factories = environment.controllerFactories ?? defaultFactories(root);
+  for (const factory of factories) {
     try {
       const controller = factory(context);
-      if (controller) {
-        controllers.push(controller);
-        controller.setPolicy?.(context.policy);
-      }
+      if (!controller) continue;
+      controllers.push(controller);
+      controller.setPolicy?.(context.policy);
     } catch (error) {
-      environment.onError?.(error, factory);
+      context.onError(error, factory);
     }
   }
+
+  const browserHtml = browserDocument?.documentElement;
+  browserHtml?.classList.add('motion-ready');
+  let destroyed = false;
+  let pageInactive = false;
+
+  function applyPageInactive(reason) {
+    if (pageInactive) return;
+    pageInactive = true;
+    const staticPolicy = {
+      ...context.policy,
+      motionAllowed: false,
+      finePointerEffects: false,
+      blendAllowed: false,
+      perspectiveAllowed: false,
+      hidden: true,
+    };
+    context.policy = staticPolicy;
+    for (const controller of controllers) {
+      try {
+        controller.pagehide?.(reason);
+        controller.setPolicy?.(staticPolicy);
+      } catch (error) {
+        context.onError(error, controller);
+      }
+    }
+    try {
+      context.coordinator.cancelCurrent();
+    } catch (error) {
+      context.onError(error);
+    }
+    scheduler.cancelAll();
+    scheduler.suspend();
+  }
+
+  function onPageShow() {
+    initializeMotion(root, environment);
+    pageInactive = false;
+    navigationLocked = false;
+    scheduler.resetTiming();
+    const refreshedPolicy = context.refreshPolicy();
+    if (refreshedPolicy) latestRawPolicy = refreshedPolicy;
+    context.policy = applyNavigationLock(latestRawPolicy ?? context.policy);
+    if (context.policy.motionAllowed && !context.policy.hidden) scheduler.resume();
+    else scheduler.suspend();
+    for (const controller of controllers) {
+      try {
+        controller.setPolicy?.(
+          controller.navigation
+            ? (latestRawPolicy ?? context.policy)
+            : context.policy,
+        );
+      } catch (error) {
+        context.onError(error, controller);
+      }
+    }
+  }
+
+  browserWindow?.addEventListener('pagehide', () => applyPageInactive('pagehide'), {
+    signal: abortController.signal,
+  });
+  browserWindow?.addEventListener('pageshow', onPageShow, {
+    signal: abortController.signal,
+  });
+
   const mount = {
     destroy() {
+      if (destroyed) return;
+      destroyed = true;
       abortController.abort();
-      for (const controller of controllers) controller.destroy?.();
+      applyPageInactive('destroy');
+      for (const controller of controllers) {
+        try {
+          controller.destroy?.();
+        } catch (error) {
+          context.onError(error, controller);
+        }
+      }
       scheduler.destroy();
+      browserHtml?.classList.remove('motion-ready');
       mounts.delete(root);
     },
   };
