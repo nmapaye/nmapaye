@@ -374,6 +374,35 @@ test('maps an idle event timestamp onto the next scheduler frame', () => {
   assert.deepEqual(elapsed, [16]);
 });
 
+test('maps the first restored input before its first scheduler frame', () => {
+  const frames = [];
+  const scheduler = createFrameScheduler({
+    requestFrame(callback) {
+      frames.push(callback);
+      return frames.length;
+    },
+    cancelFrame() {},
+  });
+  scheduler.request({ update() { return false; } });
+  frames.shift()(100);
+
+  scheduler.suspend();
+  scheduler.resetTiming();
+  scheduler.resume();
+
+  const startedAt = scheduler.now(10_000);
+  const elapsed = [];
+  scheduler.request({
+    update(timestamp) {
+      elapsed.push(timestamp - startedAt);
+      return false;
+    },
+  });
+  frames.shift()(10_016);
+
+  assert.deepEqual(elapsed, [16]);
+});
+
 test('motion sources have one frame owner and no global randomness or intervals', async () => {
   const directory = new URL('../src/scripts/motion/', import.meta.url);
   const names = (await readdir(directory)).filter((name) => name.endsWith('.mjs'));

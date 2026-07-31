@@ -96,7 +96,7 @@ export function createFrameScheduler({
     },
     resetTiming() {
       rawTime = null;
-      realignOnNextFrame = false;
+      realignOnNextFrame = true;
     },
     destroy() {
       destroyed = true;
