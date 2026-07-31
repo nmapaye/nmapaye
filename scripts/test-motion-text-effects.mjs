@@ -5,6 +5,7 @@ import {
   shakeFrame,
   shuffleFrame,
 } from '../src/scripts/motion/text-effects.mjs';
+import { mountCardStacks } from '../src/scripts/motion/card-stack.mjs';
 import { createInteractionCoordinator } from '../src/scripts/motion/index.mjs';
 
 test('shake stays within 250ms, two pixels, and three oscillations', () => {
@@ -96,6 +97,12 @@ class FakeNode extends FakeEventTarget {
   matches(selector) {
     if (selector === '*') return true;
     if (selector === '[aria-hidden="true"]') return this.attrs.get('aria-hidden') === 'true';
+    const compoundAttributes = [...selector.matchAll(/\[([^\]=]+)(?:=\"([^\"]+)\")?\]/g)];
+    if (compoundAttributes.length > 1) {
+      return compoundAttributes.every(([, name, value]) => this.attrs.has(name) && (
+        value === undefined || this.attrs.get(name) === value
+      ));
+    }
     const attribute = selector.match(/^\[([^\]=]+)(?:=\"([^\"]+)\")?\]$/);
     return Boolean(attribute && this.attrs.has(attribute[1]) && (
       attribute[2] === undefined || this.attrs.get(attribute[1]) === attribute[2]
@@ -111,6 +118,15 @@ class FakeNode extends FakeEventTarget {
     return null;
   }
   getBoundingClientRect() { return this.rect; }
+  toggleAttribute(name, enabled) {
+    if (enabled) this.attrs.set(name, '');
+    else this.attrs.delete(name);
+  }
+  get dataset() {
+    return Object.fromEntries([...this.attrs].flatMap(([key, value]) => key.startsWith('data-')
+      ? [[key.slice(5).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()), value]]
+      : []));
+  }
 }
 
 function createHarness({ observer = true } = {}) {
@@ -132,20 +148,36 @@ function createHarness({ observer = true } = {}) {
     attrs: { 'data-motion-shuffle': '', 'data-motion-shuffle-label': 'AURORA' },
   }));
   const projectText = project.append(new FakeNode({ text: 'AURORA' }));
+  projectText.tagName = 'h3';
+  const projectH3 = projectText;
   const projectVisual = project.append(new FakeNode({ attrs: { 'data-motion-shuffle-visual': '', 'aria-hidden': 'true' }, text: 'AURORA' }));
   const projectLink = projectCard.append(new FakeNode({
     attrs: { 'data-motion-burst': '', 'data-motion-shake-related': 'work-title', href: '#aurora' },
   }));
-  const chapter = nav.append(new FakeNode({
-    attrs: { 'data-motion-shuffle': '', 'data-motion-shuffle-label': 'Work' },
-  }));
-  const chapterText = chapter.append(new FakeNode({ text: 'Work' }));
-  const chapterVisual = chapter.append(new FakeNode({ attrs: { 'data-motion-shuffle-visual': '', 'aria-hidden': 'true' }, text: 'Work' }));
+  const projectStack = projectCard.append(new FakeNode({ attrs: { 'data-motion-card-stack': '' } }));
+  for (let layer = 0; layer < 3; layer += 1) {
+    projectStack.append(new FakeNode({ attrs: { 'data-motion-card-layer': String(layer) } }));
+  }
+  const secondCard = work.append(new FakeNode({ attrs: { 'data-motion-card': '02' } }));
+  const secondStack = secondCard.append(new FakeNode({ attrs: { 'data-motion-card-stack': '' } }));
+  for (let layer = 0; layer < 3; layer += 1) {
+    secondStack.append(new FakeNode({ attrs: { 'data-motion-card-layer': String(layer) } }));
+  }
+  const chapters = ['Work', 'Experience', 'Notes', 'Contact'].map((label) => {
+    const chapter = nav.append(new FakeNode({
+      attrs: { 'data-motion-shuffle': '', 'data-motion-shuffle-label': label },
+    }));
+    const text = chapter.append(new FakeNode({ text: label }));
+    const visual = chapter.append(new FakeNode({ attrs: { 'data-motion-shuffle-visual': '', 'aria-hidden': 'true' }, text: label }));
+    return { chapter, text, visual };
+  });
+  const [{ chapter, text: chapterText, visual: chapterVisual }] = chapters;
   const chapterLink = nav.append(new FakeNode({ attrs: { href: '#work' } }));
   document.body = body;
   document.querySelectorAll = (selector) => {
     if (selector === '[data-motion-shake]') return [heroTitle, workTitle];
-    if (selector === '[data-motion-shuffle]') return [project, chapter];
+    if (selector === '[data-motion-shuffle]') return [project, ...chapters.map(({ chapter: item }) => item)];
+    if (selector === '[data-motion-card]') return [projectCard, secondCard];
     return [];
   };
   document.getElementById = (id) => ({ 'cover-title': heroTitle, 'work-title': workTitle }[id] ?? null);
@@ -170,15 +202,63 @@ function createHarness({ observer = true } = {}) {
   };
   const controller = mountTextEffects(context);
   return {
-    body, browserWindow, chapter, chapterLink, chapterText, chapterVisual, context,
+    body, browserWindow, chapter, chapterLink, chapterText, chapterVisual, chapters, context,
     controller, hero, heroTitle, intersectionObserver, project, projectLink,
-    projectText, projectVisual, requested, setNow(value) { now = value; }, work, workTitle,
+    projectCard, projectH3, projectStack, projectText, projectVisual, requested,
+    secondCard, secondStack, setNow(value) { now = value; }, work, workTitle,
   };
 }
 
 function trigger(harness, target, type = 'pointerover') {
   harness.context.root.ownerDocument.dispatch(type, { target });
 }
+
+test('production project shuffles claim their card owner while Chapter Index labels remain distinct', () => {
+  const harness = createHarness();
+
+  trigger(harness, harness.projectH3);
+  assert.equal(harness.context.coordinator.owner, 'shuffle:01');
+  harness.controller.update(400);
+
+  const owners = [];
+  for (const { chapter, visual } of harness.chapters) {
+    trigger(harness, chapter);
+    owners.push(harness.context.coordinator.owner);
+    harness.controller.update(400);
+    assert.equal(visual.textContent, chapter.getAttribute('data-motion-shuffle-label'));
+  }
+  assert.deepEqual(owners, [
+    'shuffle:label:1',
+    'shuffle:label:2',
+    'shuffle:label:3',
+    'shuffle:label:4',
+  ]);
+  assert.equal(new Set(['shuffle:01', ...owners]).size, 5);
+});
+
+test('project shuffle yields its card stack to static expansion without cancelling, then another card can preempt', () => {
+  const harness = createHarness();
+  const cardController = mountCardStacks(harness.context);
+
+  trigger(harness, harness.projectH3);
+  harness.projectCard.dispatch('pointerenter', { target: harness.projectH3 });
+  assert.equal(harness.context.coordinator.owner, 'shuffle:01');
+  assert.equal(harness.project.getAttribute('data-active'), '');
+  assert.equal(harness.projectStack.getAttribute('data-expanded'), '');
+  assert.equal(harness.projectStack.getAttribute('data-motion-static'), '');
+  assert.equal(harness.projectH3.textContent, 'AURORA');
+
+  harness.controller.update(400);
+  assert.equal(harness.project.getAttribute('data-active'), null);
+  assert.equal(harness.projectVisual.textContent, 'AURORA');
+
+  harness.setNow(500);
+  trigger(harness, harness.projectH3);
+  harness.secondCard.dispatch('pointerenter', { target: harness.secondCard });
+  assert.equal(harness.context.coordinator.owner, 'card:02');
+  assert.equal(harness.projectVisual.textContent, 'AURORA');
+  cardController.destroy();
+});
 
 test('standalone shake and shuffle measure their deadlines from the event', () => {
   const shake = createHarness();

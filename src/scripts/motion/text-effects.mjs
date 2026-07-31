@@ -42,17 +42,20 @@ export function mountTextEffects(context) {
     }),
   );
   const shuffles = [...document.querySelectorAll('[data-motion-shuffle]')].map(
-    (element, index) => ({
-      element,
-      zone: motionZone(element),
-      visual: element.querySelector('[data-motion-shuffle-visual]'),
-      label: element.getAttribute('data-motion-shuffle-label') ?? '',
-      owner: `shuffle:${index}`,
-      startedAt: null,
-      triggerCount: 0,
-      baseDuration: 400,
-      duration: 400,
-    }),
+    (element, index) => {
+      const cardId = element.closest('[data-motion-card]')?.dataset.motionCard;
+      return {
+        element,
+        zone: motionZone(element),
+        visual: element.querySelector('[data-motion-shuffle-visual]'),
+        label: element.getAttribute('data-motion-shuffle-label') ?? '',
+        owner: cardId ? `shuffle:${cardId}` : `shuffle:label:${index}`,
+        startedAt: null,
+        triggerCount: 0,
+        baseDuration: 400,
+        duration: 400,
+      };
+    },
   ).filter((entry) => entry.visual);
   const zones = [...new Set([...shakes, ...shuffles]
     .map((entry) => entry.zone)
