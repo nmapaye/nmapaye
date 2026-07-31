@@ -5,7 +5,7 @@ const featured = projects.find((project) => project.featured);
 const secondary = projects.filter((project) => !project.featured);
 ---
 
-<section id="work" class="chapter work" aria-labelledby="work-title">
+<section id="work" class="chapter work" data-motion-showcase aria-labelledby="work-title">
   <header class="work__header">
     <p class="chapter__label">01 / Work</p>
     <h2 id="work-title" class="display">Selected work</h2>
@@ -23,7 +23,7 @@ const secondary = projects.filter((project) => !project.featured);
         </ul>
         {featured.links && (
           <div class="work-feature__links">
-            {featured.links.map((link) => <a class="btn" href={link.href}>{link.label} ↗</a>)}
+            {featured.links.map((link) => <a class="btn" data-motion-burst href={link.href}>{link.label} ↗</a>)}
           </div>
         )}
       </div>

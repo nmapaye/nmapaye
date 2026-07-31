@@ -2,6 +2,7 @@ import {
   createBrowserFrameScheduler,
   createFrameScheduler,
 } from './scheduler.mjs';
+import { mountPointerEffects } from './pointer-effects.mjs';
 import { observeMotionPolicy } from './policy.mjs';
 
 const mounts = new WeakMap();
@@ -100,6 +101,7 @@ export function initializeMotion(root, environment = {}) {
   );
   const context = {
     root,
+    window: browserWindow,
     scheduler,
     coordinator: createInteractionCoordinator(environment.onError),
     clock:
@@ -196,7 +198,12 @@ export function initializeMotion(root, environment = {}) {
   }
   context.refreshPolicy =
     observedPolicy?.refresh?.bind(observedPolicy) ?? (() => context.policy);
-  for (const factory of environment.controllerFactories ?? []) {
+  const controllerFactories = environment.controllerFactories ?? (
+    root.getAttribute?.('data-motion-kinetic') === 'true'
+      ? [mountPointerEffects]
+      : []
+  );
+  for (const factory of controllerFactories) {
     try {
       const controller = factory(context);
       if (controller) {

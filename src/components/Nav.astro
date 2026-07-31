@@ -7,20 +7,20 @@ const resume = `${base}/${profile.resume}`.replace(/\/+/g, '/');
 
 <header class="masthead">
   <div class="masthead__inner">
-    <a class="masthead__brand" href="/">NM / Issue 01</a>
+    <a class="masthead__brand" data-motion-burst href="/">NM / Issue 01</a>
 
     <nav class="masthead__desktop" aria-label="Primary">
-      {nav.map((item) => <a href={item.href}>{item.label}</a>)}
-      <a href={resume}>Resume</a>
-      <a href={`mailto:${links.email}`}>Email</a>
+      {nav.map((item) => <a data-motion-burst href={item.href}>{item.label}</a>)}
+      <a data-motion-burst href={resume}>Resume</a>
+      <a data-motion-burst href={`mailto:${links.email}`}>Email</a>
     </nav>
 
     <details class="masthead__mobile">
       <summary>Menu</summary>
       <nav aria-label="Mobile primary">
-        {nav.map((item) => <a href={item.href}>{item.label}</a>)}
-        <a href={resume}>Resume</a>
-        <a href={`mailto:${links.email}`}>Email</a>
+        {nav.map((item) => <a data-motion-burst href={item.href}>{item.label}</a>)}
+        <a data-motion-burst href={resume}>Resume</a>
+        <a data-motion-burst href={`mailto:${links.email}`}>Email</a>
       </nav>
     </details>
   </div>

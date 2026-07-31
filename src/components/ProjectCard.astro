@@ -23,7 +23,7 @@ const { project } = Astro.props;
   {project.links && (
     <div class="project-card__links">
       {project.links.map((link) => (
-        <a href={link.href} rel={link.href.startsWith('http') ? 'noopener' : undefined}>
+        <a data-motion-burst href={link.href} rel={link.href.startsWith('http') ? 'noopener' : undefined}>
           {link.label} ↗
         </a>
       ))}

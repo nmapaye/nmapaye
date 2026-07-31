@@ -7,7 +7,7 @@ const base = import.meta.env.BASE_URL;
 const resume = `${base}/${profile.resume}`.replace(/\/+/g, '/');
 ---
 
-<section id="top" class="cover" aria-labelledby="cover-title">
+<section id="top" class="cover" data-motion-hero aria-labelledby="cover-title">
   <div class="cover__issue" aria-hidden="true">NATHANIEL MAPAYE / ISSUE 01</div>
   <Image
     class="cover__photo"
@@ -25,9 +25,9 @@ const resume = `${base}/${profile.resume}`.replace(/\/+/g, '/');
     <h1 id="cover-title" class="display">Systems<br />to screens.</h1>
     <p>{profile.tagline}</p>
     <div class="cover__actions">
-      <a class="btn btn--primary" href="#work">View work</a>
-      <a class="btn" href={resume}>Resume</a>
-      <a class="btn" href={`mailto:${links.email}`}>Email</a>
+      <a class="btn btn--primary" data-motion-burst href="#work">View work</a>
+      <a class="btn" data-motion-burst href={resume}>Resume</a>
+      <a class="btn" data-motion-burst href={`mailto:${links.email}`}>Email</a>
     </div>
   </div>
 </section>
