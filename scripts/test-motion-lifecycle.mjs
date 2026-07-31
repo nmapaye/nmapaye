@@ -232,7 +232,14 @@ class FakeEventTarget {
   contains(node) { return node === this; }
 
   getBoundingClientRect() {
-    return { top: 0, bottom: 500, left: 0, width: 500, height: 500 };
+    return {
+      top: 0,
+      bottom: 500,
+      left: 0,
+      right: 500,
+      width: 500,
+      height: 500,
+    };
   }
 }
 
