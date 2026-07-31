@@ -3,6 +3,7 @@ import test from 'node:test';
 import { mountCardStacks, reduceCardStack } from '../src/scripts/motion/card-stack.mjs';
 import { createInteractionCoordinator } from '../src/scripts/motion/index.mjs';
 import { mountPointerEffects } from '../src/scripts/motion/pointer-effects.mjs';
+import { createFrameScheduler } from '../src/scripts/motion/scheduler.mjs';
 
 const initial = {
   expanded: false,
@@ -146,7 +147,7 @@ class FakeNode extends FakeEventTarget {
   }
 }
 
-function createHarness({ observer = true } = {}) {
+function createHarness({ observer = true, suppliedScheduler, clock = () => 100 } = {}) {
   const document = new FakeEventTarget();
   const browserWindow = new FakeEventTarget();
   browserWindow.innerHeight = 900;
@@ -171,11 +172,12 @@ function createHarness({ observer = true } = {}) {
     return [];
   };
   const requested = new Set();
-  const scheduler = {
+  const fallbackScheduler = {
     request(controller) { requested.add(controller); },
     cancel(controller) { requested.delete(controller); },
     now(timestamp) { return timestamp; },
   };
+  const scheduler = suppliedScheduler ?? fallbackScheduler;
   let intersectionObserver;
   const context = {
     root,
@@ -183,7 +185,7 @@ function createHarness({ observer = true } = {}) {
     policy: { motionAllowed: true, finePointerEffects: false, forcedColors: false },
     scheduler,
     coordinator: createInteractionCoordinator(),
-    clock: () => 100,
+    clock,
     observerFactory: observer ? (callback) => {
       intersectionObserver = { observe() {}, disconnect() {}, emit(records) { callback(records); } };
       return intersectionObserver;
@@ -270,13 +272,102 @@ test('link and same-card shuffle ownership yield while unrelated cards may preem
   const marker = first.card.append(new FakeNode({ attrs: {
     'data-motion-shuffle': '', 'data-active': '',
   } }));
+  const projectName = first.card.append(new FakeNode({ attrs: { 'data-project-name': '' } }));
   assert.ok(marker);
-  first.card.dispatch('pointerleave');
-  first.card.dispatch('pointerenter');
+  first.card.dispatch('pointerleave', { target: projectName });
+  first.card.dispatch('pointerenter', { target: projectName });
   assert.equal(harness.context.coordinator.owner, 'shuffle:1');
   second.card.dispatch('pointerenter');
   assert.equal(harness.context.coordinator.owner, 'card:2');
   assert.equal(harness.requested.size, 1);
+});
+
+test('a stale marker cannot make another card shuffle yield', () => {
+  const harness = createHarness();
+  const first = harness.cards[0];
+  first.card.append(new FakeNode({ attrs: {
+    'data-motion-shuffle': '', 'data-active': '',
+  } }));
+
+  assert.equal(harness.context.coordinator.claim('shuffle:2', 1), true);
+  first.card.dispatch('pointerenter');
+
+  assert.equal(harness.context.coordinator.owner, 'card:1');
+  assert.equal(first.stack.getAttribute('data-motion-static'), null);
+  assert.equal(harness.requested.size, 1);
+});
+
+test('the shared scheduler measures card ownership from an event between frames', () => {
+  const callbacks = new Map();
+  let nextFrame = 0;
+  const scheduler = createFrameScheduler({
+    requestFrame(callback) {
+      const id = ++nextFrame;
+      callbacks.set(id, callback);
+      return id;
+    },
+    cancelFrame(id) { callbacks.delete(id); },
+  });
+  const runFrame = (timestamp) => {
+    const [id, callback] = callbacks.entries().next().value ?? [];
+    assert.notEqual(callback, undefined, 'expected a shared scheduler frame');
+    callbacks.delete(id);
+    callback(timestamp);
+  };
+  const sentinel = { update() { return false; } };
+  scheduler.request(sentinel);
+  runFrame(1000);
+
+  const harness = createHarness({
+    suppliedScheduler: scheduler,
+    clock: () => 1050,
+  });
+  harness.cards[0].card.dispatch('pointerenter');
+  assert.equal(harness.context.coordinator.owner, 'card:1');
+
+  runFrame(1050);
+  runFrame(1100);
+  runFrame(1150);
+  runFrame(1200);
+  runFrame(1250);
+  assert.equal(harness.context.coordinator.owner, 'card:1');
+  runFrame(1300);
+  assert.equal(harness.context.coordinator.owner, null);
+  assert.equal(scheduler.snapshot().active, 0);
+});
+
+test('policy changes and direct destroy synchronously clean an active stack', () => {
+  const policyHarness = createHarness();
+  const policyStack = policyHarness.cards[0].stack;
+  policyHarness.cards[0].card.dispatch('pointerenter');
+  policyHarness.controller.setPolicy({ motionAllowed: false });
+  assert.equal(policyHarness.context.coordinator.owner, null);
+  assert.equal(policyHarness.requested.size, 0);
+  assert.equal(policyStack.getAttribute('data-expanded'), '');
+  assert.equal(policyStack.getAttribute('data-motion-static'), '');
+  for (const layer of policyStack.querySelectorAll('[data-motion-card-layer]')) {
+    assert.equal(layer.style.values.has('will-change'), false);
+  }
+  policyHarness.controller.setPolicy({ motionAllowed: true });
+  assert.equal(policyStack.getAttribute('data-expanded'), '');
+  assert.equal(policyStack.getAttribute('data-motion-static'), null);
+
+  const destroyHarness = createHarness();
+  const { card, stack } = destroyHarness.cards[0];
+  card.dispatch('pointerleave');
+  card.dispatch('pointerenter');
+  destroyHarness.controller.destroy();
+  assert.equal(destroyHarness.context.coordinator.owner, null);
+  assert.equal(destroyHarness.requested.size, 0);
+  assert.equal(stack.getAttribute('data-expanded'), null);
+  assert.equal(stack.getAttribute('data-motion-static'), null);
+  for (const layer of stack.querySelectorAll('[data-motion-card-layer]')) {
+    assert.equal(layer.style.values.has('will-change'), false);
+  }
+  card.dispatch('pointerenter');
+  card.dispatch('click', { target: card });
+  assert.equal(destroyHarness.context.coordinator.owner, null);
+  assert.equal(destroyHarness.requested.size, 0);
 });
 
 test('offscreen observers and fallback scrolling synchronously cancel and leave re-entry idle', () => {

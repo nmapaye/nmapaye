@@ -34,6 +34,11 @@ export function mountCardStacks(context) {
   const showcase = cards[0].closest('[data-motion-showcase]');
   let visible = true;
   let visibilityObserver = null;
+  let destroyed = false;
+  const listenerAbortController = new AbortController();
+  const abortListeners = () => listenerAbortController.abort();
+  if (context.signal?.aborted) abortListeners();
+  else context.signal?.addEventListener('abort', abortListeners, { once: true });
   const entries = cards.map((card) => ({
     card,
     stack: card.querySelector('[data-motion-card-stack]'),
@@ -75,7 +80,7 @@ export function mountCardStacks(context) {
   }
 
   function transition(entry, event) {
-    if (!visible) return;
+    if (destroyed || !visible) return;
     const next = reduceCardStack(entry.state, event, context.policy);
     if (!next.animate) {
       entry.state = next;
@@ -84,8 +89,7 @@ export function mountCardStacks(context) {
     }
     const currentOwner = context.coordinator.owner;
     const relatedShuffleOwnsCard =
-      typeof currentOwner === 'string' &&
-      currentOwner.startsWith('shuffle:') &&
+      currentOwner === `shuffle:${entry.card.dataset.motionCard}` &&
       entry.card.querySelector('[data-motion-shuffle][data-active]');
     if (
       (
@@ -120,14 +124,20 @@ export function mountCardStacks(context) {
       return entries.some((entry) => entry.startedAt !== null);
     },
     setPolicy(policy) {
+      if (destroyed) return;
       for (const entry of entries) {
         entry.state = reduceCardStack(entry.state, { type: 'policy' }, policy);
         if (!policy.motionAllowed) entry.stack.setAttribute('data-motion-static', '');
+        else entry.stack.removeAttribute('data-motion-static');
         finish(entry);
       }
       context.scheduler.cancel(controller);
     },
     destroy() {
+      if (destroyed) return;
+      destroyed = true;
+      listenerAbortController.abort();
+      context.signal?.removeEventListener?.('abort', abortListeners);
       context.scheduler.cancel(controller);
       visibilityObserver?.disconnect();
       for (const entry of entries) {
@@ -142,7 +152,7 @@ export function mountCardStacks(context) {
   };
 
   function applyVisibility(nextVisible) {
-    if (visible === nextVisible) return;
+    if (destroyed || visible === nextVisible) return;
     visible = nextVisible;
     if (!visible) {
       for (const entry of entries) cancel(entry);
@@ -164,34 +174,34 @@ export function mountCardStacks(context) {
     };
     refreshFallbackVisibility();
     browserWindow?.addEventListener('scroll', refreshFallbackVisibility, {
-      signal: context.signal,
+      signal: listenerAbortController.signal,
       passive: true,
     });
     browserWindow?.addEventListener('resize', refreshFallbackVisibility, {
-      signal: context.signal,
+      signal: listenerAbortController.signal,
       passive: true,
     });
   }
 
   for (const entry of entries) {
     entry.card.addEventListener('pointerenter', () => transition(entry, { type: 'pointerenter' }), {
-      signal: context.signal,
+      signal: listenerAbortController.signal,
     });
     entry.card.addEventListener('pointerleave', () => transition(entry, { type: 'pointerleave' }), {
-      signal: context.signal,
+      signal: listenerAbortController.signal,
     });
     entry.card.addEventListener('focusin', () => transition(entry, { type: 'focusin' }), {
-      signal: context.signal,
+      signal: listenerAbortController.signal,
     });
     entry.card.addEventListener('focusout', (event) => {
       if (!entry.card.contains(event.relatedTarget)) transition(entry, { type: 'focusout' });
-    }, { signal: context.signal });
+    }, { signal: listenerAbortController.signal });
     entry.card.addEventListener('click', (event) => {
       transition(entry, {
         type: 'activate',
         interactiveTarget: Boolean(event.target.closest?.('a,button')),
       });
-    }, { signal: context.signal });
+    }, { signal: listenerAbortController.signal });
   }
   return controller;
 }
