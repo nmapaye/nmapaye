@@ -53,5 +53,13 @@ static assets), run:
 npm run test:sites
 ```
 
+To verify the distinct Sites and GitHub Pages release layouts, compare their
+static-file hashes, inspect a Sites archive, and leave ordinary Pages output in
+`dist/`, run:
+
+```sh
+npm run test:release-layouts
+```
+
 The committed one-page résumé at `public/resume.pdf` is the file deployed by
 the site. Replace it with the latest PDF, then run the tests above.
