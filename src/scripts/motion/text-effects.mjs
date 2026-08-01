@@ -28,6 +28,10 @@ export function shuffleFrame(label, elapsed, options) {
 
 export function mountTextEffects(context) {
   const document = context.root.ownerDocument;
+  const listeners = new AbortController();
+  const abortListeners = () => listeners.abort();
+  if (context.signal?.aborted) abortListeners();
+  else context.signal?.addEventListener('abort', abortListeners, { once: true });
   const motionZone = (element) => element.closest(
     '[data-motion-hero], [data-motion-showcase], section, nav',
   ) ?? document.body;
@@ -63,12 +67,14 @@ export function mountTextEffects(context) {
     .map((entry) => entry.zone)
     .filter(Boolean))];
   const zoneVisibility = new Map(zones.map((zone) => [zone, true]));
+  const zoneEpoch = new Map(zones.map((zone) => [zone, 0]));
   const shakeByElement = new Map(shakes.map((entry) => [entry.element, entry]));
   const shuffleByElement = new Map(shuffles.map((entry) => [entry.element, entry]));
   const shuffleByInteractiveOwner = new Map(shuffles
     .filter((entry) => entry.interactiveOwner)
     .map((entry) => [entry.interactiveOwner, entry]));
   let visibilityObserver = null;
+  let destroyed = false;
 
   function cancelSchedulerIfIdle() {
     if ([...shakes, ...shuffles].every((entry) => entry.startedAt === null)) {
@@ -96,6 +102,7 @@ export function mountTextEffects(context) {
 
   function startNow(entry, cancel, duration, startedAt = context.scheduler.now(context.clock())) {
     if (
+      destroyed ||
       zoneVisibility.get(entry.zone) === false ||
       !context.policy.motionAllowed ||
       context.policy.forcedColors
@@ -119,10 +126,14 @@ export function mountTextEffects(context) {
     const currentOwner = context.coordinator.owner;
     const followsBurst = burstTarget && typeof currentOwner === 'string' && currentOwner.startsWith('link:');
     const duration = entry.visual && followsBurst ? 300 : entry.baseDuration;
+    const queuedAtZoneEpoch = zoneEpoch.get(entry.zone);
     if (followsBurst && context.coordinator.afterRelease(
       currentOwner,
       entry.owner,
-      () => startNow(entry, cancel, duration, triggeredAt + 100),
+      () => {
+        if (zoneEpoch.get(entry.zone) !== queuedAtZoneEpoch) return;
+        startNow(entry, cancel, duration, triggeredAt + 100);
+      },
     )) return;
     startNow(entry, cancel, duration, triggeredAt);
   }
@@ -161,8 +172,16 @@ export function mountTextEffects(context) {
       }
     },
     destroy() {
+      destroyed = true;
+      listeners.abort();
+      context.signal?.removeEventListener?.('abort', abortListeners);
       visibilityObserver?.disconnect();
-      for (const entry of shakes) cancelShake(entry);
+      for (const entry of shakes) {
+        cancelShake(entry);
+        entry.element.style.removeProperty('--shake-x');
+        entry.element.style.removeProperty('--shake-neg-x');
+        entry.element.style.removeProperty('--shake-y');
+      }
       for (const entry of shuffles) {
         cancelShuffle(entry);
         entry.element.removeAttribute('data-motion-enhanced');
@@ -175,6 +194,7 @@ export function mountTextEffects(context) {
     if (zoneVisibility.get(zone) === nextVisible) return;
     zoneVisibility.set(zone, nextVisible);
     if (nextVisible) return;
+    zoneEpoch.set(zone, (zoneEpoch.get(zone) ?? 0) + 1);
     for (const entry of shakes) if (entry.zone === zone) cancelShake(entry);
     for (const entry of shuffles) if (entry.zone === zone) cancelShuffle(entry);
     cancelSchedulerIfIdle();
@@ -202,11 +222,11 @@ export function mountTextEffects(context) {
     };
     refreshFallbackVisibility();
     browserWindow?.addEventListener('scroll', refreshFallbackVisibility, {
-      signal: context.signal,
+      signal: listeners.signal,
       passive: true,
     });
     browserWindow?.addEventListener('resize', refreshFallbackVisibility, {
-      signal: context.signal,
+      signal: listeners.signal,
       passive: true,
     });
   }
@@ -276,7 +296,7 @@ export function mountTextEffects(context) {
 
   for (const type of ['pointerover', 'click', 'focusin']) {
     document.addEventListener(type, onTrigger, {
-      signal: context.signal,
+      signal: listeners.signal,
       passive: type === 'pointerover',
     });
   }

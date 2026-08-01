@@ -130,7 +130,10 @@ class FakeNode extends FakeEventTarget {
   }
 }
 
-function createHarness({ observer = true } = {}) {
+function createHarness({
+  observer = true,
+  signal = new AbortController().signal,
+} = {}) {
   const document = new FakeEventTarget();
   const browserWindow = new FakeEventTarget();
   browserWindow.innerHeight = 900;
@@ -221,7 +224,7 @@ function createHarness({ observer = true } = {}) {
   let intersectionObserver;
   const context = {
     root: { ownerDocument: document },
-    signal: new AbortController().signal,
+    signal,
     policy: { motionAllowed: true, forcedColors: false },
     coordinator: createInteractionCoordinator(),
     scheduler: {
@@ -429,9 +432,13 @@ test('policy, hidden state, destroy, and grid preemption restore text exactly an
     else if (ending === 'hidden') harness.controller.setPolicy({ motionAllowed: true, forcedColors: false, hidden: true });
     else if (ending === 'destroy') harness.controller.destroy();
     else harness.context.coordinator.claim('grid', 2);
-    assert.deepEqual([...harness.heroTitle.style.values.entries()], [
-      ['--shake-x', '0px'], ['--shake-neg-x', '0px'], ['--shake-y', '0px'],
-    ], ending);
+    if (ending === 'destroy') {
+      assert.equal(harness.heroTitle.style.values.size, 0, ending);
+    } else {
+      assert.deepEqual([...harness.heroTitle.style.values.entries()], [
+        ['--shake-x', '0px'], ['--shake-neg-x', '0px'], ['--shake-y', '0px'],
+      ], ending);
+    }
     assert.equal(harness.heroTitle.textContent, 'Systems to screens.', ending);
     assert.equal(harness.requested.size, 0, ending);
   }
@@ -452,6 +459,58 @@ test('policy, hidden state, destroy, and grid preemption restore text exactly an
   assert.equal(forcedShuffle.requested.size, 0);
 });
 
+test('direct text-effects destroy removes shake custom properties', () => {
+  const harness = createHarness();
+  trigger(harness, harness.heroTitle);
+  harness.controller.update(0);
+  assert.ok(harness.heroTitle.style.values.size > 0);
+
+  harness.controller.destroy();
+
+  assert.equal(harness.heroTitle.style.values.size, 0);
+});
+
+test('direct text-effects destroy detaches delegated triggers', () => {
+  const harness = createHarness();
+  harness.controller.destroy();
+
+  trigger(harness, harness.heroTitle);
+  trigger(harness, harness.project);
+
+  assert.equal(harness.heroTitle.getAttribute('data-motion-active'), null);
+  assert.equal(harness.project.getAttribute('data-active'), null);
+  assert.equal(harness.context.coordinator.owner, null);
+  assert.equal(harness.requested.size, 0);
+});
+
+test('a pre-aborted context does not install delegated text triggers', () => {
+  const abortController = new AbortController();
+  abortController.abort();
+  const harness = createHarness({ signal: abortController.signal });
+
+  trigger(harness, harness.heroTitle);
+  trigger(harness, harness.project);
+
+  assert.equal(harness.heroTitle.getAttribute('data-motion-active'), null);
+  assert.equal(harness.project.getAttribute('data-active'), null);
+  assert.equal(harness.context.coordinator.owner, null);
+  assert.equal(harness.requested.size, 0);
+});
+
+test('direct text-effects destroy invalidates queued burst follow-ups', () => {
+  const harness = createHarness();
+  assert.equal(harness.context.coordinator.claim('link:#aurora', 1), true);
+  trigger(harness, harness.projectLink);
+
+  harness.controller.destroy();
+  harness.context.coordinator.release('link:#aurora');
+
+  assert.equal(harness.project.getAttribute('data-active'), null);
+  assert.equal(harness.projectVisual.textContent, 'AURORA');
+  assert.equal(harness.context.coordinator.owner, null);
+  assert.equal(harness.requested.size, 0);
+});
+
 test('burst follow-ups use the original activation time and stale hidden work stays idle', () => {
   const harness = createHarness();
   harness.setNow(0);
@@ -470,6 +529,21 @@ test('burst follow-ups use the original activation time and stale hidden work st
   harness.intersectionObserver.emit([{ target: harness.work, isIntersecting: true }]);
   assert.equal(harness.requested.size, 0);
   assert.equal(harness.project.getAttribute('data-active'), null);
+});
+
+test('an offscreen transition invalidates a queued burst follow-up after re-entry', () => {
+  const harness = createHarness();
+  assert.equal(harness.context.coordinator.claim('link:#aurora', 1), true);
+  trigger(harness, harness.projectLink);
+
+  harness.intersectionObserver.emit([{ target: harness.work, isIntersecting: false }]);
+  harness.intersectionObserver.emit([{ target: harness.work, isIntersecting: true }]);
+  harness.context.coordinator.release('link:#aurora');
+
+  assert.equal(harness.project.getAttribute('data-active'), null);
+  assert.equal(harness.projectVisual.textContent, 'AURORA');
+  assert.equal(harness.context.coordinator.owner, null);
+  assert.equal(harness.requested.size, 0);
 });
 
 test('same-card burst entry queues the project shuffle despite its card pointer boundary', () => {
