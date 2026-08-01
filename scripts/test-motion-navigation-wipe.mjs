@@ -424,6 +424,9 @@ function createAdapterCancellationHarness({
   const scheduled = [];
   const destinations = [];
   const errors = [];
+  const fragmentScrolls = [];
+  document.body = new FakeTarget({ ownerDocument: document, tagName: 'body' });
+  document.activeElement = document.body;
   const mobileMenus = Array.from({ length: 2 }, () => {
     const menu = new FakeTarget({ ownerDocument: document, tagName: 'details' });
     menu.appendChild(new FakeTarget({ ownerDocument: document, tagName: 'summary' }));
@@ -435,6 +438,7 @@ function createAdapterCancellationHarness({
   );
   browserWindow.location = {
     href: 'https://nmapaye.com/',
+    hash: '',
     assign(destination) { destinations.push(destination); },
   };
   browserWindow.setTimeout = (callback, delay) => {
@@ -477,6 +481,19 @@ function createAdapterCancellationHarness({
       preventDefault() { prevented += 1; },
       ...overrides,
     });
+    const destination = new URL(target.getAttribute('href'), browserWindow.location.href);
+    const sameDocumentFragment = destination.origin === 'https://nmapaye.com'
+      && destination.pathname === '/'
+      && destination.search === ''
+      && destination.hash !== '';
+    if (prevented === 0 && sameDocumentFragment) {
+      browserWindow.location.href = destination.href;
+      browserWindow.location.hash = destination.hash;
+      fragmentScrolls.push(destination.hash);
+      if (mobileMenus.some((menu) => !menu.open && menu.contains(document.activeElement))) {
+        document.activeElement = document.body;
+      }
+    }
     return prevented;
   }
   const anchor = createAnchor();
@@ -490,6 +507,7 @@ function createAdapterCancellationHarness({
     destinations,
     document,
     errors,
+    fragmentScrolls,
     layer,
     mobileMenus,
     panels,
@@ -497,7 +515,7 @@ function createAdapterCancellationHarness({
   };
 }
 
-test('keyboard same-document mobile activation closes menus and restores focus to its summary', () => {
+test('keyboard same-document mobile activation restores summary focus after its native default action', async () => {
   const harness = createAdapterCancellationHarness({ activate: false });
   const [menu, otherMenu] = harness.mobileMenus;
   const summary = menu.querySelector('summary');
@@ -507,9 +525,32 @@ test('keyboard same-document mobile activation closes menus and restores focus t
   assert.equal(harness.click(anchor), 0);
   assert.equal(menu.open, false);
   assert.equal(otherMenu.open, false);
+  assert.equal(harness.browserWindow.location.hash, '#work');
+  assert.deepEqual(harness.fragmentScrolls, ['#work']);
+  assert.equal(harness.document.activeElement, harness.document.body);
+
+  await Promise.resolve();
+
   assert.deepEqual(summary.focusCalls, [{ preventScroll: true }]);
   assert.equal(harness.document.activeElement, summary);
   assert.equal(harness.scheduled.length, 0);
+});
+
+test('adapter destroy cancels deferred mobile-menu focus restoration', async () => {
+  const harness = createAdapterCancellationHarness({ activate: false });
+  const menu = harness.mobileMenus[0];
+  const summary = menu.querySelector('summary');
+  const anchor = harness.createAnchor('/#work', menu);
+  harness.document.activeElement = anchor;
+
+  assert.equal(harness.click(anchor), 0);
+  assert.equal(harness.document.activeElement, harness.document.body);
+  harness.controller.destroy();
+
+  await Promise.resolve();
+
+  assert.deepEqual(summary.focusCalls, []);
+  assert.equal(harness.document.activeElement, harness.document.body);
 });
 
 test('eligible cross-route navigation closes every menu before starting the wipe', () => {

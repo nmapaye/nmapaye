@@ -174,18 +174,24 @@ export function mountNavigationWipe(context) {
     onError: context.onError,
   });
 
-  function closeOpenMobileMenus() {
+  function closeOpenMobileMenus({ deferFocus = false } = {}) {
     for (const menu of mobileMenus) {
       const containsActiveElement = menu.contains(document.activeElement);
       menu.open = false;
-      if (containsActiveElement) menu.querySelector('summary')?.focus({ preventScroll: true });
+      if (!containsActiveElement) continue;
+      const focusSummary = () => {
+        if (listeners.signal.aborted) return;
+        menu.querySelector('summary')?.focus({ preventScroll: true });
+      };
+      if (deferFocus) queueMicrotask(focusSummary);
+      else focusSummary();
     }
   }
 
   function onClick(event) {
     const anchor = event.target.closest?.('a[href]');
     if (!anchor) return;
-    closeOpenMobileMenus();
+    closeOpenMobileMenus({ deferFocus: true });
     const result = classifyNavigation({
       href: anchor.getAttribute('href'),
       target: anchor.getAttribute('target') ?? '',
