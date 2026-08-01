@@ -51,6 +51,9 @@ jobs:
       - name: Test public resume
         run: python scripts/test-resume.py
 
+      - name: Test Sites packaging and restore Pages artifact
+        run: npm run test:release-layouts
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
