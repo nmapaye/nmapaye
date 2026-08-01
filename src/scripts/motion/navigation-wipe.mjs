@@ -175,7 +175,11 @@ export function mountNavigationWipe(context) {
   });
 
   function closeOpenMobileMenus() {
-    for (const menu of mobileMenus) menu.open = false;
+    for (const menu of mobileMenus) {
+      const containsActiveElement = menu.contains(document.activeElement);
+      menu.open = false;
+      if (containsActiveElement) menu.querySelector('summary')?.focus({ preventScroll: true });
+    }
   }
 
   function onClick(event) {

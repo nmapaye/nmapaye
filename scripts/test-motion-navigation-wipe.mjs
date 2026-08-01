@@ -268,9 +268,14 @@ test('navigation and setup failures clear the lock and report errors', () => {
 });
 
 class FakeTarget {
-  constructor() {
+  constructor({ ownerDocument = null, tagName = '' } = {}) {
     this.attributes = new Map();
     this.listeners = new Map();
+    this.children = [];
+    this.ownerDocument = ownerDocument;
+    this.parentNode = null;
+    this.tagName = tagName.toLowerCase();
+    this.focusCalls = [];
   }
 
   addEventListener(type, listener, options = {}) {
@@ -304,6 +309,34 @@ class FakeTarget {
 
   listenerCount(type) {
     return this.listeners.get(type)?.size ?? 0;
+  }
+
+  appendChild(child) {
+    child.parentNode = this;
+    child.ownerDocument ??= this.ownerDocument;
+    this.children.push(child);
+    return child;
+  }
+
+  contains(node) {
+    for (let current = node; current; current = current.parentNode) {
+      if (current === this) return true;
+    }
+    return false;
+  }
+
+  focus(options) {
+    this.focusCalls.push(options);
+    if (this.ownerDocument) this.ownerDocument.activeElement = this;
+  }
+
+  querySelector(selector) {
+    for (const child of this.children) {
+      if (child.tagName === selector.toLowerCase()) return child;
+      const descendant = child.querySelector(selector);
+      if (descendant) return descendant;
+    }
+    return null;
   }
 
   querySelectorAll() {
@@ -392,7 +425,8 @@ function createAdapterCancellationHarness({
   const destinations = [];
   const errors = [];
   const mobileMenus = Array.from({ length: 2 }, () => {
-    const menu = new FakeTarget();
+    const menu = new FakeTarget({ ownerDocument: document, tagName: 'details' });
+    menu.appendChild(new FakeTarget({ ownerDocument: document, tagName: 'summary' }));
     menu.open = true;
     return menu;
   });
@@ -428,10 +462,11 @@ function createAdapterCancellationHarness({
     policy: { motionAllowed: true, forcedColors: false },
     onError(error) { errors.push(error); },
   });
-  function createAnchor(href = '/writing/') {
-    const anchor = new FakeTarget();
+  function createAnchor(href = '/writing/', menu = null) {
+    const anchor = new FakeTarget({ ownerDocument: document, tagName: 'a' });
     anchor.setAttribute('href', href);
     anchor.closest = (selector) => selector === 'a[href]' ? anchor : null;
+    menu?.appendChild(anchor);
     return anchor;
   }
   function click(target = createAnchor(), overrides = {}) {
@@ -462,11 +497,18 @@ function createAdapterCancellationHarness({
   };
 }
 
-test('same-document mobile navigation closes every menu without preventing the anchor', () => {
+test('keyboard same-document mobile activation closes menus and restores focus to its summary', () => {
   const harness = createAdapterCancellationHarness({ activate: false });
+  const [menu, otherMenu] = harness.mobileMenus;
+  const summary = menu.querySelector('summary');
+  const anchor = harness.createAnchor('/#work', menu);
+  harness.document.activeElement = anchor;
 
-  assert.equal(harness.click(harness.createAnchor('/#work')), 0);
-  assert.equal(harness.mobileMenus.some((menu) => menu.open), false);
+  assert.equal(harness.click(anchor), 0);
+  assert.equal(menu.open, false);
+  assert.equal(otherMenu.open, false);
+  assert.deepEqual(summary.focusCalls, [{ preventScroll: true }]);
+  assert.equal(harness.document.activeElement, summary);
   assert.equal(harness.scheduled.length, 0);
 });
 
@@ -525,10 +567,17 @@ test('a pre-aborted context installs no navigation or menu lifecycle listeners',
     assert.equal(harness.browserWindow.listenerCount(type), 0, type);
     harness.browserWindow.dispatch(type, {});
   }
+  assert.equal(harness.panels.at(-1).listenerCount('transitionend'), 0);
+  for (const panel of harness.panels) {
+    assert.equal(panel.listenerCount('transitioncancel'), 0);
+    panel.dispatch('transitioncancel', {});
+  }
+  harness.panels.at(-1).dispatch('transitionend', { propertyName: 'transform' });
   assert.equal(harness.click(harness.anchor), 0);
 
   assert.equal(harness.scheduled.length, 0);
   assert.deepEqual(harness.destinations, []);
+  assert.deepEqual(harness.errors, []);
   assert.equal(harness.layer.hasAttribute('data-active'), false);
   assert.equal(harness.mobileMenus.every((menu) => menu.open), true);
 });
