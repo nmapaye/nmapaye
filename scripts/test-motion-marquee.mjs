@@ -88,6 +88,8 @@ test('marquee enhancement follows valid dimensions, observer, and scroll listene
   assert.deepEqual(sequence, [
     'observer',
     'listener:scroll',
+    'listener:resize',
+    'listener:orientationchange',
     'attribute:data-motion-enhanced',
   ]);
 });
@@ -196,4 +198,183 @@ test('offscreen marquee ignores scroll, resumes onscreen, and cancels immediatel
   observer.emit([{ isIntersecting: false }]);
   assert.equal(requested.size, 0);
   assert.ok(controller);
+});
+
+class MarqueeEventTarget {
+  constructor() {
+    this.handlers = new Map();
+  }
+
+  addEventListener(type, listener, options = {}) {
+    if (options.signal?.aborted) return;
+    if (!this.handlers.has(type)) this.handlers.set(type, new Set());
+    this.handlers.get(type).add(listener);
+    options.signal?.addEventListener('abort', () => {
+      this.handlers.get(type)?.delete(listener);
+    }, { once: true });
+  }
+
+  dispatch(type, event = {}) {
+    for (const listener of [...(this.handlers.get(type) ?? [])]) {
+      listener({ type, ...event });
+    }
+  }
+}
+
+function createMountedMarqueeHarness({ trackWidth = 400 } = {}) {
+  let clock = 0;
+  const browserWindow = new MarqueeEventTarget();
+  browserWindow.scrollY = 0;
+  const tracks = [
+    { scrollWidth: trackWidth },
+    { scrollWidth: trackWidth },
+  ];
+  const hero = {};
+  const element = {
+    attrs: new Map(),
+    style: {
+      values: new Map(),
+      setProperty(key, value) { this.values.set(key, value); },
+      removeProperty(key) { this.values.delete(key); },
+      getPropertyValue(key) { return this.values.get(key) ?? ''; },
+    },
+    setAttribute(name, value = '') { this.attrs.set(name, value); },
+    removeAttribute(name) { this.attrs.delete(name); },
+    closest(selector) { return selector === '[data-motion-hero]' ? hero : null; },
+    querySelectorAll(selector) {
+      return selector === '[data-motion-marquee-track]' ? tracks : [];
+    },
+  };
+  const requested = new Set();
+  const scheduler = {
+    request(controller) { requested.add(controller); },
+    cancel(controller) { requested.delete(controller); },
+    now(timestamp) { return timestamp; },
+  };
+  const context = {
+    root: {
+      ownerDocument: {
+        defaultView: browserWindow,
+        querySelector(selector) {
+          return selector === '[data-motion-marquee]' ? element : null;
+        },
+      },
+    },
+    clock: () => clock,
+    policy: { motionAllowed: true, forcedColors: false },
+    signal: new AbortController().signal,
+    scheduler,
+    observerFactory: () => null,
+  };
+  const controller = mountMarquee(context);
+  return {
+    browserWindow,
+    context,
+    controller,
+    element,
+    requested,
+    setClock(value) { clock = value; },
+    tracks,
+  };
+}
+
+function marqueeX(harness) {
+  return Number(
+    harness.element.style.getPropertyValue('--motion-marquee-x').replace('px', ''),
+  );
+}
+
+test('mounted marquee stops no later than 250ms after the scroll event', () => {
+  const harness = createMountedMarqueeHarness();
+  harness.browserWindow.scrollY = 100;
+  harness.browserWindow.dispatch('scroll');
+
+  for (let timestamp = 16; timestamp < 250; timestamp += 16) {
+    harness.setClock(timestamp);
+    harness.controller.update(timestamp);
+  }
+
+  harness.setClock(250);
+  assert.equal(harness.controller.update(250), false);
+});
+
+test('mounted marquee uses event time rather than capped frame time for its 250ms deadline', () => {
+  const harness = createMountedMarqueeHarness();
+  harness.browserWindow.scrollY = 100;
+  harness.browserWindow.dispatch('scroll');
+
+  harness.setClock(500);
+  assert.equal(
+    harness.controller.update(50),
+    false,
+    'a stalled frame cannot extend motion beyond the input deadline',
+  );
+});
+
+test('mounted marquee restarts after natural idle without inheriting its old frame baseline', () => {
+  const harness = createMountedMarqueeHarness();
+  harness.browserWindow.scrollY = 100;
+  harness.browserWindow.dispatch('scroll');
+
+  let active = true;
+  for (let timestamp = 16; active && timestamp <= 400; timestamp += 16) {
+    active = harness.controller.update(timestamp);
+  }
+  assert.equal(active, false, 'first scroll session reaches natural idle');
+  const settledX = marqueeX(harness);
+
+  harness.setClock(2000);
+  harness.browserWindow.scrollY = 200;
+  harness.browserWindow.dispatch('scroll');
+  assert.equal(harness.controller.update(2016), true);
+  assert.ok(
+    Math.abs(marqueeX(harness) - settledX) >= 1,
+    'the later scroll produces visible movement',
+  );
+});
+
+test('resize and orientation changes refresh the live marquee wrap span without scheduling work', () => {
+  const harness = createMountedMarqueeHarness();
+  harness.browserWindow.scrollY = 100;
+  harness.browserWindow.dispatch('scroll');
+
+  let active = true;
+  for (let timestamp = 16; active && timestamp <= 400; timestamp += 16) {
+    active = harness.controller.update(timestamp);
+  }
+  assert.equal(active, false);
+  harness.context.scheduler.cancel(harness.controller);
+
+  harness.tracks[0].scrollWidth = 50;
+  harness.tracks[1].scrollWidth = 50;
+  harness.browserWindow.dispatch('resize');
+  assert.ok(marqueeX(harness) <= 0 && marqueeX(harness) > -50);
+  assert.equal(harness.requested.size, 0);
+
+  harness.tracks[0].scrollWidth = 20;
+  harness.tracks[1].scrollWidth = 20;
+  harness.browserWindow.dispatch('orientationchange');
+  assert.ok(marqueeX(harness) <= 0 && marqueeX(harness) > -20);
+  assert.equal(harness.requested.size, 0);
+});
+
+test('direct destroy removes marquee-owned listeners before later events can restart it', () => {
+  const harness = createMountedMarqueeHarness();
+  harness.browserWindow.scrollY = 100;
+  harness.browserWindow.dispatch('scroll');
+  harness.controller.update(16);
+  harness.controller.destroy();
+
+  assert.equal(harness.requested.size, 0);
+  assert.equal(harness.element.attrs.has('data-motion-enhanced'), false);
+  assert.equal(harness.element.style.getPropertyValue('--motion-marquee-x'), '');
+
+  harness.setClock(1000);
+  harness.browserWindow.scrollY = 200;
+  harness.browserWindow.dispatch('scroll');
+  harness.tracks[0].scrollWidth = 50;
+  harness.browserWindow.dispatch('resize');
+
+  assert.equal(harness.requested.size, 0);
+  assert.equal(harness.element.style.getPropertyValue('--motion-marquee-x'), '');
 });
