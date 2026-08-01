@@ -1,0 +1,110 @@
+# Portfolio release-hardening morning handoff
+
+Date: 2026-08-01 (Asia/Jakarta)
+
+Branch: `nmapaye-bot/sites-preview-repair`
+
+Implementation HEAD verified: `8189eff4288d3c5f30be8d87a662b694d152feeb`
+
+## Release verdict
+
+The four confirmed defects are fixed, the available automated and browser verification passed, and ordinary Astro `dist/` is restored. The branch is **not release-ready**: no usable current-iOS Simulator was found and `simctl` is unavailable, so current-iOS Safari parity remains an open, release-blocking gate. Chromium emulation was not used as a substitute.
+
+No P0 defect was reproduced. The sprint fixed three P1 defects and one P2 defect.
+
+## Fixed defects
+
+### P1 — marquee lifecycle
+
+- **Root cause:** The 250 ms stop deadline was coupled to animation-frame progress; natural idle retained a stale frame baseline; responsive geometry was not refreshed; and adapter listeners lacked independent teardown ownership.
+- **Source:** `src/scripts/motion/marquee.mjs`
+- **Regression coverage:** `scripts/test-motion-marquee.mjs` covers the event-clock deadline, stalled frames, baseline reset, resize/orientation geometry refresh, normalized wrapping, and direct-destroy listener cleanup. Against the archived prior source: 11 tests, 5 passed and 6 failed. Repaired result: 11 passed, 0 failed.
+- **Commit:** `87aa4348f6ba3ee856c445cadd39712627a6600c` (`fix(motion): harden marquee lifecycle`)
+
+### P2 — navigation-wipe fragments and teardown
+
+- **Root cause:** Literal empty same-document fragments such as `#` were classified as wipe-eligible, and delegated/page/panel listeners were not all owned by a controller that direct teardown could abort.
+- **Source:** `src/scripts/motion/navigation-wipe.mjs`
+- **Regression coverage:** `scripts/test-motion-navigation-wipe.mjs` covers empty same-document fragments, click eligibility and locking, completion/error races, pre-aborted setup, transition cancellation, and post-destroy listener detachment. Against the archived prior source: 10 tests, 8 passed and 2 failed. Repaired result at this stage: 10 passed, 0 failed.
+- **Commit:** `17ee9c7e5f04c23d262730a5be7f6e6b37db10ba` (`fix(motion): harden navigation wipe cleanup`)
+
+### P1 — text-effect teardown and stale queued work
+
+- **Root cause:** Queued burst follow-ups were not invalidated when a zone moved offscreen or the controller was destroyed; direct teardown left delegated listeners and shake CSS custom properties behind.
+- **Source:** `src/scripts/motion/text-effects.mjs`
+- **Regression coverage:** `scripts/test-motion-text-effects.mjs` covers destroyed/offscreen queued work, controller-owned listeners, shake-property cleanup, and preservation of the already-correct pre-aborted behavior. Against the archived prior source: 22 tests, 17 passed and 5 failed. Repaired result: 22 passed, 0 failed.
+- **Commit:** `7f68d3c6972394cd654ffd1e0e11bd94cb3de617` (`fix(motion): harden text effect teardown`)
+
+### P1 — mobile menu navigation and responsive lifecycle
+
+- **Root cause:** The native mobile `<details>` remained open after ordinary same-document navigation and had no closure at resize, orientation, pagehide, or direct teardown. The real motion root is a masthead sibling, so menu discovery also had to use `context.root.ownerDocument` rather than the motion root.
+- **Source:** `src/components/Nav.astro`; `src/scripts/motion/navigation-wipe.mjs`
+- **Regression coverage:** `scripts/test-motion-navigation-wipe.mjs` adds the stable menu marker, production document/root topology, same-document and cross-route closure ordering, responsive/page lifecycle closure, direct teardown, and pre-aborted setup. Initial red run: 13 tests, 8 passed and 5 failed; corrected-topology red run: 9 passed and 4 failed. Final result: 13 passed, 0 failed.
+- **Commit:** `8189eff4288d3c5f30be8d87a662b694d152feeb` (`fix(nav): close mobile menu across lifecycle`)
+
+## Verification commands
+
+| Command | Result |
+| --- | --- |
+| `node --test scripts/test-motion-marquee.mjs` | Archived prior source: exit 1, 5 passed and 6 failed. Repaired worktree and post-commit/fix-round reruns: exit 0, 11 passed and 0 failed. |
+| `node --test scripts/test-motion-navigation-wipe.mjs` | Wipe-repair archive: exit 1, 8 passed and 2 failed; repaired stage: exit 0, 10 passed and 0 failed. Mobile-menu test-first run: exit 1, 8 passed and 5 failed; corrected-topology red run: exit 1, 9 passed and 4 failed; final/post-commit runs: exit 0, 13 passed and 0 failed. |
+| `node --test scripts/test-motion-text-effects.mjs` | Archived prior source: exit 1, 17 passed and 5 failed. Repaired and post-commit reruns: exit 0, 22 passed and 0 failed. |
+| `ASTRO_TELEMETRY_DISABLED=1 node --test scripts/test-motion-marquee.mjs scripts/test-motion-navigation-wipe.mjs scripts/test-motion-text-effects.mjs` | 46 passed, 0 failed. |
+| `ASTRO_TELEMETRY_DISABLED=1 npm test` | Motion: 117 passed, 0 failed. Build/SEO/homepage/hosting/bundle: 53 passed, 0 failed. Astro built 3 pages. |
+| `PIP_DISABLE_PIP_VERSION_CHECK=1 ../../.venv/bin/python scripts/test-resume.py` | 2 passed; `OK`. |
+| `ASTRO_TELEMETRY_DISABLED=1 npm run test:sites` | 12 passed, 0 failed, including staged distribution and worker route/query/404 checks. |
+| `ASTRO_TELEMETRY_DISABLED=1 npm run build` | Task 4 build: exit 0, 3 pages built. Final build: exit 0, 3 pages built after `test:sites`, restoring ordinary Astro output. |
+| `git diff --check` | Passed; no tracked whitespace errors. |
+| `git diff --check -- scripts/test-motion-navigation-wipe.mjs src/scripts/motion/navigation-wipe.mjs` | Exit 0 with no output. |
+| `git diff --check -- scripts/test-motion-text-effects.mjs src/scripts/motion/text-effects.mjs` | Completed cleanly; no unrelated scoped changes. |
+| `git status --short` | Exit 0; at verified implementation HEAD, only the pre-existing untracked release-hardening plan was reported. |
+| `git show --check --oneline --stat HEAD` | Completed without whitespace diagnostics for the marquee commit. |
+| `git show --format= --name-only HEAD` | Listed only `scripts/test-motion-marquee.mjs` and `src/scripts/motion/marquee.mjs`. |
+| `git show --stat --oneline <commit>` | Run for all four sprint commits; recorded stats matched their scoped file sets. |
+| `git show --format=fuller --find-renames <commit>` | Full diffs reviewed for all four sprint commits; no release concern found. |
+| `git show --format='%H %s' --name-only <commit>` | Corroborated all four sprint commit hashes, subjects, and file lists. |
+| `ASTRO_TELEMETRY_DISABLED=1 npm run preview -- --host 127.0.0.1 --port 48731` | Initial sandbox bind failed with `listen EPERM`; the approved-localhost rerun became ready at `http://127.0.0.1:48731/`. |
+| `curl --silent --show-error --max-time 2 http://127.0.0.1:48731/` after shutdown | Exit 7 (`Couldn't connect`), confirming the sprint preview was stopped. |
+| `xcrun --find Simulator` | Failed: utility was not a developer tool or on `PATH`. |
+| `xcrun --find simctl` | Failed: utility was not a developer tool or on `PATH`. |
+| `/usr/bin/xcrun simctl list runtimes` | Failed: unable to find utility `simctl`. |
+
+## Browser matrix
+
+All HTML route/width rows below passed exact URL, expected title/H1, present `<main>`, and no document-level horizontal overflow. The PDF row passed local PDF viewer URL, title, and loading checks at every width.
+
+| Route | 390 | 768 | 1024 | 1175 | 1440 |
+| --- | --- | --- | --- | --- | --- |
+| `/` | Pass | Pass | Pass | Pass | Pass |
+| `/writing/` | Pass | Pass | Pass | Pass | Pass |
+| `/writing/aurora-private-caffeine-tracking/` | Pass | Pass | Pass | Pass | Pass |
+| `/resume.pdf` | Pass | Pass | Pass | Pass | Pass |
+
+Additional passed checks:
+
+- Responsive navigation: mobile menu at 390 px; desktop navigation at 768, 1024, 1175, and 1440 px; no horizontal overflow. Work, Experience, Notes, Contact, breakpoint round trips, and three rapid Work activations all closed the mobile menu. Work and Contact landed at 84 px beneath a 71 px sticky-header bottom.
+- Navigation state: anchors, reload/scroll restoration at `/#work`, back/forward history, and rapid repeated Notes activation passed. Exactly one locked navigation completed.
+- Native Chrome: keyboard focus with visible 4 px outlines, burst/shuffle, grid keyboard movement, pointer spring/exit cleanup, five-sticker drag cleanup, 20 px grid drag without page scroll, card fans, rapid scroll, routes/history, repeated activation, effect cleanup, and overflow passed.
+- Safari: homepage, `/#work` sticky landing, article title/H1, back/forward restoration, and exact 200% full-page zoom passed; readable wrapping had no horizontal clipping/scrollbar, and zoom was reset to verified 100%.
+- Firefox: homepage, `/#work`, article title/H1, and back/forward restoration passed.
+- Accessibility/fallback: reduced motion, forced colors, no-JavaScript fallback, and active-effect cleanup passed.
+- Lifecycle: explicit controlled `visibilitychange` hidden/visible behavior and `frozen` to `active` passed with no active effects, wipe, or overflow. This is not claimed as a physical tab-switch result.
+- External-link DOM audit passed without opening external destinations; same-tab behavior and `rel` values were correct.
+- Final cleanup found 0 active text effects, decorations, wipe layers/panels, or open mobile menus; shake inline style was empty and console warnings/errors were 0.
+
+Unavailable check:
+
+- **Current-iOS Safari: release-blocking.** No usable current-iOS Simulator was found and `simctl` is unavailable. No current-iOS route or interaction parity is claimed.
+
+## Output and operational boundaries
+
+The final `ASTRO_TELEMETRY_DISABLED=1 npm run build` restored ordinary static Astro output after Sites staging verification. Positive proof: `dist/index.html`, `dist/writing/index.html`, `dist/writing/aurora-private-caffeine-tracking/index.html`, and `dist/resume.pdf` exist. Negative proof: Sites-only `dist/_worker.js` and `dist/client/` are absent.
+
+No push, deploy, publish, Sites-project mutation, tool installation, or credential change occurred.
+
+## Non-blocking residual notes
+
+- The mobile-menu “in-menu” regression verifies document-owned closure, but its fake anchor is not literally nested inside the fake menu.
+- The pre-aborted regression counts document/window listeners but does not separately count panel transition listeners; production registers those with the same already-aborted signal.
+
+These are deferred test-quality observations, not release blockers. The current-iOS Safari gate above remains the only explicit release blocker.
