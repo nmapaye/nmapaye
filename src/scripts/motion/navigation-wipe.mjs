@@ -155,6 +155,7 @@ export function mountNavigationWipe(context) {
   const browserWindow = document.defaultView;
   const layer = context.root.querySelector('[data-motion-wipe]');
   const panels = [...context.root.querySelectorAll('[data-motion-wipe-panel]')];
+  const mobileMenus = [...document.querySelectorAll('[data-mobile-menu]')];
   if (!browserWindow || !layer || panels.length !== 3) return null;
   const listeners = new AbortController();
   const abortListeners = () => listeners.abort();
@@ -173,9 +174,14 @@ export function mountNavigationWipe(context) {
     onError: context.onError,
   });
 
+  function closeOpenMobileMenus() {
+    for (const menu of mobileMenus) menu.open = false;
+  }
+
   function onClick(event) {
     const anchor = event.target.closest?.('a[href]');
     if (!anchor) return;
+    closeOpenMobileMenus();
     const result = classifyNavigation({
       href: anchor.getAttribute('href'),
       target: anchor.getAttribute('target') ?? '',
@@ -194,7 +200,16 @@ export function mountNavigationWipe(context) {
   }
 
   document.addEventListener('click', onClick, { signal: listeners.signal });
-  browserWindow.addEventListener('pagehide', () => wipe.pagehide(), {
+  browserWindow.addEventListener('resize', closeOpenMobileMenus, {
+    signal: listeners.signal,
+  });
+  browserWindow.addEventListener('orientationchange', closeOpenMobileMenus, {
+    signal: listeners.signal,
+  });
+  browserWindow.addEventListener('pagehide', () => {
+    closeOpenMobileMenus();
+    wipe.pagehide();
+  }, {
     signal: listeners.signal,
   });
   panels.at(-1).addEventListener('transitionend', (event) => {
@@ -212,6 +227,7 @@ export function mountNavigationWipe(context) {
       wipe.setPolicy(policy);
     },
     destroy() {
+      closeOpenMobileMenus();
       listeners.abort();
       context.signal?.removeEventListener?.('abort', abortListeners);
       wipe.destroy();

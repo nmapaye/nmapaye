@@ -35,8 +35,9 @@ function atRuleBlock(css, header) {
 }
 
 test('source wipe markup and styles define one exact accessible three-panel sequence', async () => {
-  const [markup, css] = await Promise.all([
+  const [markup, navMarkup, css] = await Promise.all([
     readFile(new URL('../src/components/effects/MotionLayer.astro', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/Nav.astro', import.meta.url), 'utf8'),
     readFile(new URL('../src/styles/motion.css', import.meta.url), 'utf8'),
   ]);
   assert.equal((markup.match(/data-motion-wipe-panel=/g) ?? []).length, 3);
@@ -67,6 +68,7 @@ test('source wipe markup and styles define one exact accessible three-panel sequ
     accessibility ?? '',
     /\[data-motion-blobs\],\s*\[data-motion-stickers\],\s*\[data-motion-particles\],\s*\[data-motion-wipe\]\s*\{\s*display:\s*none;/,
   );
+  assert.match(navMarkup, /<details\s+class="masthead__mobile"\s+data-mobile-menu>/);
 });
 
 test('only ordinary same-origin HTML navigation is eligible', () => {
@@ -299,6 +301,14 @@ class FakeTarget {
   getAttribute(name) {
     return this.attributes.get(name) ?? null;
   }
+
+  listenerCount(type) {
+    return this.listeners.get(type)?.size ?? 0;
+  }
+
+  querySelectorAll() {
+    return [];
+  }
 }
 
 test('the delegated adapter prevents every eligible locked click but retains the first destination', () => {
@@ -372,18 +382,29 @@ test('the delegated adapter prevents every eligible locked click but retains the
   assert.deepEqual(destinations, ['https://nmapaye.com/writing/']);
 });
 
-function createAdapterCancellationHarness({ signal = new AbortController().signal } = {}) {
+function createAdapterCancellationHarness({
+  activate = true,
+  signal = new AbortController().signal,
+} = {}) {
   const document = new FakeTarget();
   const browserWindow = new FakeTarget();
   const scheduled = [];
   const destinations = [];
   const errors = [];
+  const mobileMenus = Array.from({ length: 2 }, () => {
+    const menu = new FakeTarget();
+    menu.open = true;
+    return menu;
+  });
+  document.querySelectorAll = (selector) => (
+    selector === '[data-mobile-menu]' ? mobileMenus : []
+  );
   browserWindow.location = {
     href: 'https://nmapaye.com/',
     assign(destination) { destinations.push(destination); },
   };
   browserWindow.setTimeout = (callback, delay) => {
-    scheduled.push({ callback, delay });
+    scheduled.push({ callback, delay, openMenus: mobileMenus.filter((menu) => menu.open).length });
     return scheduled.length;
   };
   browserWindow.clearTimeout = () => {};
@@ -407,29 +428,75 @@ function createAdapterCancellationHarness({ signal = new AbortController().signa
     policy: { motionAllowed: true, forcedColors: false },
     onError(error) { errors.push(error); },
   });
-  const anchor = new FakeTarget();
-  anchor.setAttribute('href', '/writing/');
-  anchor.closest = (selector) => selector === 'a[href]' ? anchor : null;
-  document.dispatch('click', {
-    ...ordinary,
-    target: anchor,
-    preventDefault() {},
-  });
+  function createAnchor(href = '/writing/') {
+    const anchor = new FakeTarget();
+    anchor.setAttribute('href', href);
+    anchor.closest = (selector) => selector === 'a[href]' ? anchor : null;
+    return anchor;
+  }
+  function click(target = createAnchor(), overrides = {}) {
+    let prevented = 0;
+    document.dispatch('click', {
+      ...ordinary,
+      target,
+      preventDefault() { prevented += 1; },
+      ...overrides,
+    });
+    return prevented;
+  }
+  const anchor = createAnchor();
+  if (activate) click(anchor);
   return {
     anchor,
     browserWindow,
+    click,
     controller,
+    createAnchor,
     destinations,
     document,
     errors,
     layer,
+    mobileMenus,
     panels,
     scheduled,
   };
 }
 
+test('same-document mobile navigation closes every menu without preventing the anchor', () => {
+  const harness = createAdapterCancellationHarness({ activate: false });
+
+  assert.equal(harness.click(harness.createAnchor('/#work')), 0);
+  assert.equal(harness.mobileMenus.some((menu) => menu.open), false);
+  assert.equal(harness.scheduled.length, 0);
+});
+
+test('eligible cross-route navigation closes every menu before starting the wipe', () => {
+  const harness = createAdapterCancellationHarness({ activate: false });
+
+  assert.equal(harness.click(harness.createAnchor('/writing/')), 1);
+  assert.equal(harness.mobileMenus.some((menu) => menu.open), false);
+  assert.equal(harness.scheduled.length, 1);
+  assert.equal(harness.scheduled[0].openMenus, 0);
+});
+
+test('responsive and page lifecycle boundaries close every mobile menu', () => {
+  for (const boundary of ['resize', 'orientationchange', 'pagehide', 'destroy']) {
+    const harness = createAdapterCancellationHarness({ activate: false });
+
+    if (boundary === 'destroy') harness.controller.destroy();
+    else harness.browserWindow.dispatch(boundary, {});
+
+    assert.equal(
+      harness.mobileMenus.some((menu) => menu.open),
+      false,
+      boundary,
+    );
+  }
+});
+
 test('direct adapter destroy detaches delegated navigation listeners', () => {
   const harness = createAdapterCancellationHarness();
+  for (const menu of harness.mobileMenus) menu.open = true;
   harness.controller.destroy();
   let prevented = 0;
   harness.document.dispatch('click', {
@@ -441,17 +508,29 @@ test('direct adapter destroy detaches delegated navigation listeners', () => {
   assert.equal(prevented, 0);
   assert.equal(harness.scheduled.length, 1);
   assert.equal(harness.layer.hasAttribute('data-active'), false);
+  assert.equal(harness.mobileMenus.some((menu) => menu.open), false);
 });
 
-test('a pre-aborted context does not install delegated navigation listeners', () => {
+test('a pre-aborted context installs no navigation or menu lifecycle listeners', () => {
   const abortController = new AbortController();
   abortController.abort();
 
-  const harness = createAdapterCancellationHarness({ signal: abortController.signal });
+  const harness = createAdapterCancellationHarness({
+    activate: false,
+    signal: abortController.signal,
+  });
+
+  assert.equal(harness.document.listenerCount('click'), 0);
+  for (const type of ['resize', 'orientationchange', 'pagehide']) {
+    assert.equal(harness.browserWindow.listenerCount(type), 0, type);
+    harness.browserWindow.dispatch(type, {});
+  }
+  assert.equal(harness.click(harness.anchor), 0);
 
   assert.equal(harness.scheduled.length, 0);
   assert.deepEqual(harness.destinations, []);
   assert.equal(harness.layer.hasAttribute('data-active'), false);
+  assert.equal(harness.mobileMenus.every((menu) => menu.open), true);
 });
 
 test('transition cancellation reports only while it consumes a pending navigation', () => {

@@ -15,7 +15,7 @@ const resume = `${base}/${profile.resume}`.replace(/\/+/g, '/');
       <a data-motion-burst href={`mailto:${links.email}`}>Email</a>
     </nav>
 
-    <details class="masthead__mobile">
+    <details class="masthead__mobile" data-mobile-menu>
       <summary>Menu</summary>
       <nav aria-label="Mobile primary">
         {nav.map((item) => <a data-motion-burst href={item.href}>{item.label}</a>)}
