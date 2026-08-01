@@ -134,6 +134,20 @@ test('only ordinary same-origin HTML navigation is eligible', () => {
   );
 });
 
+test('empty same-document fragments remain ordinary navigation', () => {
+  for (const href of ['#', '/#']) {
+    assert.deepEqual(
+      classifyNavigation(
+        { href, target: '', download: false },
+        ordinary,
+        'https://nmapaye.com/',
+      ),
+      { eligible: false, destination: null },
+      href,
+    );
+  }
+});
+
 function createControllerHarness({
   policy = { motionAllowed: true, forcedColors: false },
   navigate,
@@ -258,6 +272,7 @@ class FakeTarget {
   }
 
   addEventListener(type, listener, options = {}) {
+    if (options.signal?.aborted) return;
     if (!this.listeners.has(type)) this.listeners.set(type, new Set());
     this.listeners.get(type).add(listener);
     options.signal?.addEventListener('abort', () => {
@@ -357,7 +372,7 @@ test('the delegated adapter prevents every eligible locked click but retains the
   assert.deepEqual(destinations, ['https://nmapaye.com/writing/']);
 });
 
-function createAdapterCancellationHarness() {
+function createAdapterCancellationHarness({ signal = new AbortController().signal } = {}) {
   const document = new FakeTarget();
   const browserWindow = new FakeTarget();
   const scheduled = [];
@@ -386,7 +401,7 @@ function createAdapterCancellationHarness() {
   };
   const controller = mountNavigationWipe({
     root,
-    signal: new AbortController().signal,
+    signal,
     coordinator: { preempt() {}, release() {} },
     lockForNavigation() { return () => {}; },
     policy: { motionAllowed: true, forcedColors: false },
@@ -401,14 +416,43 @@ function createAdapterCancellationHarness() {
     preventDefault() {},
   });
   return {
+    anchor,
     browserWindow,
     controller,
     destinations,
+    document,
     errors,
+    layer,
     panels,
     scheduled,
   };
 }
+
+test('direct adapter destroy detaches delegated navigation listeners', () => {
+  const harness = createAdapterCancellationHarness();
+  harness.controller.destroy();
+  let prevented = 0;
+  harness.document.dispatch('click', {
+    ...ordinary,
+    target: harness.anchor,
+    preventDefault() { prevented += 1; },
+  });
+
+  assert.equal(prevented, 0);
+  assert.equal(harness.scheduled.length, 1);
+  assert.equal(harness.layer.hasAttribute('data-active'), false);
+});
+
+test('a pre-aborted context does not install delegated navigation listeners', () => {
+  const abortController = new AbortController();
+  abortController.abort();
+
+  const harness = createAdapterCancellationHarness({ signal: abortController.signal });
+
+  assert.equal(harness.scheduled.length, 0);
+  assert.deepEqual(harness.destinations, []);
+  assert.equal(harness.layer.hasAttribute('data-active'), false);
+});
 
 test('transition cancellation reports only while it consumes a pending navigation', () => {
   const active = createAdapterCancellationHarness();

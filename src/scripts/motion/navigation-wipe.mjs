@@ -25,17 +25,17 @@ export function classifyNavigation(anchor, activation, currentUrl) {
     return { eligible: false, destination: null };
   }
 
-  const sameDocumentHash =
+  const sameDocumentFragment =
     destination.origin === current.origin
     && destination.pathname === current.pathname
     && destination.search === current.search
-    && destination.hash;
+    && anchor.href.includes('#');
   const extension = destination.pathname.match(/(\.[a-z0-9]+)$/i)?.[1]?.toLowerCase();
   const isHtml = extension === undefined || extension === '.html';
   if (
     destination.origin !== current.origin
     || !['http:', 'https:'].includes(destination.protocol)
-    || sameDocumentHash
+    || sameDocumentFragment
     || !isHtml
   ) {
     return { eligible: false, destination: null };
@@ -156,6 +156,10 @@ export function mountNavigationWipe(context) {
   const layer = context.root.querySelector('[data-motion-wipe]');
   const panels = [...context.root.querySelectorAll('[data-motion-wipe-panel]')];
   if (!browserWindow || !layer || panels.length !== 3) return null;
+  const listeners = new AbortController();
+  const abortListeners = () => listeners.abort();
+  if (context.signal?.aborted) abortListeners();
+  else context.signal?.addEventListener('abort', abortListeners, { once: true });
 
   const wipe = createNavigationWipeController({
     schedule: (callback, delay) => browserWindow.setTimeout(callback, delay),
@@ -189,17 +193,17 @@ export function mountNavigationWipe(context) {
     wipe.start(result.destination);
   }
 
-  document.addEventListener('click', onClick, { signal: context.signal });
+  document.addEventListener('click', onClick, { signal: listeners.signal });
   browserWindow.addEventListener('pagehide', () => wipe.pagehide(), {
-    signal: context.signal,
+    signal: listeners.signal,
   });
   panels.at(-1).addEventListener('transitionend', (event) => {
     if (event.propertyName === 'transform') wipe.complete();
-  }, { signal: context.signal });
+  }, { signal: listeners.signal });
   for (const panel of panels) {
     panel.addEventListener('transitioncancel', () => {
       wipe.fail(new Error('navigation wipe transition cancelled'));
-    }, { signal: context.signal });
+    }, { signal: listeners.signal });
   }
 
   return {
@@ -208,6 +212,8 @@ export function mountNavigationWipe(context) {
       wipe.setPolicy(policy);
     },
     destroy() {
+      listeners.abort();
+      context.signal?.removeEventListener?.('abort', abortListeners);
       wipe.destroy();
     },
   };
