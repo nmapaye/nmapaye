@@ -4,13 +4,13 @@ Date: 2026-08-01 (Asia/Jakarta)
 
 Branch: `nmapaye-bot/sites-preview-repair`
 
-Implementation HEAD verified: `8189eff4288d3c5f30be8d87a662b694d152feeb`
+Implementation HEAD verified: `cf88bffb1c43dbfd9e1ae160532451b6fa04465d`
 
 ## Release verdict
 
-The four confirmed defects are fixed, the available automated and browser verification passed, and ordinary Astro `dist/` is restored. The branch is **not release-ready**: no usable current-iOS Simulator was found and `simctl` is unavailable, so current-iOS Safari parity remains an open, release-blocking gate. Chromium emulation was not used as a substitute.
+The six confirmed defects are fixed, the available automated and browser verification passed, and ordinary Astro `dist/` is restored. The branch is **not release-ready**: no usable current-iOS Simulator was found and `simctl` is unavailable, so current-iOS Safari parity remains an open, release-blocking gate. Chromium emulation was not used as a substitute.
 
-No P0 defect was reproduced. The sprint fixed three P1 defects and one P2 defect.
+No P0 defect was reproduced. The sprint fixed five P1 defects and one P2 defect.
 
 ## Fixed defects
 
@@ -42,15 +42,29 @@ No P0 defect was reproduced. The sprint fixed three P1 defects and one P2 defect
 - **Regression coverage:** `scripts/test-motion-navigation-wipe.mjs` adds the stable menu marker, production document/root topology, same-document and cross-route closure ordering, responsive/page lifecycle closure, direct teardown, and pre-aborted setup. Initial red run: 13 tests, 8 passed and 5 failed; corrected-topology red run: 9 passed and 4 failed. Final result: 13 passed, 0 failed.
 - **Commit:** `8189eff4288d3c5f30be8d87a662b694d152feeb` (`fix(nav): close mobile menu across lifecycle`)
 
+### P1 — queued observer delivery after text-effect teardown
+
+- **Root cause:** An `IntersectionObserver` delivery queued before `disconnect()` retained the destroyed controller's closures, allowing stale offscreen work to restore removed shake properties and release a coordinator owner reused after remount.
+- **Source:** `src/scripts/motion/text-effects.mjs`
+- **Regression coverage:** `scripts/test-motion-text-effects.mjs` invokes the saved observer callback after destroy and owner reuse. Red: 23 tests, 22 passed and 1 failed because three shake properties returned. Green: 23 passed, 0 failed.
+- **Commit:** `1455ac32523f2e920e31d9e77ecc8a595d6532df` (`fix(motion): ignore queued observer work after teardown`)
+
+### P1 — mobile-menu focus after keyboard activation
+
+- **Root cause:** Closing the focused mobile `<details>` hid its active link; the browser's native same-document default action then overrode synchronous summary focus and left focus on `<body>`.
+- **Source:** `src/scripts/motion/navigation-wipe.mjs`
+- **Regression coverage:** `scripts/test-motion-navigation-wipe.mjs` now models literal menu containment, native fragment focus fixup, post-default microtask restoration, destroy cancellation, and zero pre-aborted panel listeners. Initial focus red: 13 tests, 12 passed and 1 failed; synchronous fix: 13 passed. Browser-driven timing red: 12 passed and 1 failed; destroy-guard red: 13 passed and 1 failed; final: 14 passed, 0 failed.
+- **Commits:** `38bfa8ebc6199ca79bb81e82940bc2855c47f934` (`fix(nav): restore focus after mobile menu activation`); `cf88bffb1c43dbfd9e1ae160532451b6fa04465d` (`fix(nav): defer menu focus past anchor activation`)
+
 ## Verification commands
 
 | Command | Result |
 | --- | --- |
 | `node --test scripts/test-motion-marquee.mjs` | Archived prior source: exit 1, 5 passed and 6 failed. Repaired worktree and post-commit/fix-round reruns: exit 0, 11 passed and 0 failed. |
-| `node --test scripts/test-motion-navigation-wipe.mjs` | Wipe-repair archive: exit 1, 8 passed and 2 failed; repaired stage: exit 0, 10 passed and 0 failed. Mobile-menu test-first run: exit 1, 8 passed and 5 failed; corrected-topology red run: exit 1, 9 passed and 4 failed; final/post-commit runs: exit 0, 13 passed and 0 failed. |
-| `node --test scripts/test-motion-text-effects.mjs` | Archived prior source: exit 1, 17 passed and 5 failed. Repaired and post-commit reruns: exit 0, 22 passed and 0 failed. |
-| `ASTRO_TELEMETRY_DISABLED=1 node --test scripts/test-motion-marquee.mjs scripts/test-motion-navigation-wipe.mjs scripts/test-motion-text-effects.mjs` | 46 passed, 0 failed. |
-| `ASTRO_TELEMETRY_DISABLED=1 npm test` | Motion: 117 passed, 0 failed. Build/SEO/homepage/hosting/bundle: 53 passed, 0 failed. Astro built 3 pages. |
+| `node --test scripts/test-motion-navigation-wipe.mjs` | Earlier wipe/mobile-menu red-green evidence retained; final focus-timing and destroy-guard regressions produced the expected red failures. Final result: 14 passed, 0 failed. |
+| `node --test scripts/test-motion-text-effects.mjs` | Archived prior source: exit 1, 17 passed and 5 failed. Initial repair: 22 passed. Queued-observer regression red: 22 passed and 1 failed; final result: 23 passed, 0 failed. |
+| `ASTRO_TELEMETRY_DISABLED=1 node --test scripts/test-motion-marquee.mjs scripts/test-motion-navigation-wipe.mjs scripts/test-motion-text-effects.mjs` | Final component totals: 48 passed, 0 failed. |
+| `ASTRO_TELEMETRY_DISABLED=1 npm test` | Final motion suite: 119 passed, 0 failed. Build/SEO/homepage/hosting/bundle suite: 53 passed, 0 failed. Astro built 3 pages. |
 | `PIP_DISABLE_PIP_VERSION_CHECK=1 ../../.venv/bin/python scripts/test-resume.py` | 2 passed; `OK`. |
 | `ASTRO_TELEMETRY_DISABLED=1 npm run test:sites` | 12 passed, 0 failed, including staged distribution and worker route/query/404 checks. |
 | `ASTRO_TELEMETRY_DISABLED=1 npm run build` | Task 4 build: exit 0, 3 pages built. Final build: exit 0, 3 pages built after `test:sites`, restoring ordinary Astro output. |
@@ -83,6 +97,7 @@ All HTML route/width rows below passed exact URL, expected title/H1, present `<m
 Additional passed checks:
 
 - Responsive navigation: mobile menu at 390 px; desktop navigation at 768, 1024, 1175, and 1440 px; no horizontal overflow. Work, Experience, Notes, Contact, breakpoint round trips, and three rapid Work activations all closed the mobile menu. Work and Contact landed at 84 px beneath a 71 px sticky-header bottom.
+- Final focus timing at 390 px: an active nested Work link closed the menu and performed the native `#work` navigation; immediate native focus fixup moved focus to `<body>`, then deferred restoration settled on the visible `Menu` summary. Work remained 84 px below the 71 px header, with no wipe or overflow.
 - Navigation state: anchors, reload/scroll restoration at `/#work`, back/forward history, and rapid repeated Notes activation passed. Exactly one locked navigation completed.
 - Native Chrome: keyboard focus with visible 4 px outlines, burst/shuffle, grid keyboard movement, pointer spring/exit cleanup, five-sticker drag cleanup, 20 px grid drag without page scroll, card fans, rapid scroll, routes/history, repeated activation, effect cleanup, and overflow passed.
 - Safari: homepage, `/#work` sticky landing, article title/H1, back/forward restoration, and exact 200% full-page zoom passed; readable wrapping had no horizontal clipping/scrollbar, and zoom was reset to verified 100%.
@@ -98,13 +113,10 @@ Unavailable check:
 
 ## Output and operational boundaries
 
-The final `ASTRO_TELEMETRY_DISABLED=1 npm run build` restored ordinary static Astro output after Sites staging verification. Positive proof: `dist/index.html`, `dist/writing/index.html`, `dist/writing/aurora-private-caffeine-tracking/index.html`, and `dist/resume.pdf` exist. Negative proof: Sites-only `dist/_worker.js` and `dist/client/` are absent.
+The final `ASTRO_TELEMETRY_DISABLED=1 npm run build` restored ordinary static Astro output after Sites staging verification. Positive proof: `dist/index.html`, `dist/writing/index.html`, `dist/writing/aurora-private-caffeine-tracking/index.html`, and `dist/resume.pdf` exist. Negative proof: Sites-only `dist/server/index.js` and `dist/client/` are absent.
 
 No push, deploy, publish, Sites-project mutation, tool installation, or credential change occurred.
 
-## Non-blocking residual notes
+## Residual risk
 
-- The mobile-menu “in-menu” regression verifies document-owned closure, but its fake anchor is not literally nested inside the fake menu.
-- The pre-aborted regression counts document/window listeners but does not separately count panel transition listeners; production registers those with the same already-aborted signal.
-
-These are deferred test-quality observations, not release blockers. The current-iOS Safari gate above remains the only explicit release blocker.
+The final review's two test-quality observations were closed by literal nested-menu coverage and explicit pre-aborted panel-listener assertions. The current-iOS Safari gate above remains the only explicit release blocker.

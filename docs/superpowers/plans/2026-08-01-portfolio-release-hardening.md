@@ -23,6 +23,8 @@
 - **P1:** Mobile `<details>` navigation remains open after activating an in-page link and remains logically open across a desktop/mobile breakpoint round trip, obscuring the destination section on return to mobile.
 - **P1:** Existing uncommitted marquee repair addresses stop deadlines coupled to animation frames, stale responsive geometry, and adapter listener cleanup; verify its regressions fail against `HEAD` and pass in the worktree before preserving it.
 - **P1:** Existing uncommitted text-effect repair addresses queued shake/shuffle work surviving offscreen/destroy lifecycle changes; verify those regressions fail against `HEAD` and pass in the worktree, while retaining pre-abort as preservation coverage for behavior already correct in `HEAD`.
+- **P1:** Final review reproduced a queued `IntersectionObserver` delivery mutating text-effect state after destroy; guard stale delivery and owner reuse with regression coverage.
+- **P1:** Final review reproduced hidden focus after keyboard activation closed the mobile menu; restore focus after the native fragment default action without changing scroll behavior.
 - **P2:** Existing uncommitted navigation-wipe repair rejects empty same-document fragments and detaches delegated listeners on direct destroy/pre-aborted mount; verify red/green evidence before preserving it.
 - **Release blocker (environment):** No usable current-iOS Simulator was found; `simctl` is unavailable. Do not claim the iOS Safari gate passed.
 
@@ -103,3 +105,11 @@
 - [x] List every verification command and browser matrix result, distinguishing passed checks from unavailable checks.
 - [x] State explicitly that no push/deploy/publish/Sites-project mutation occurred and ordinary Astro `dist/` was restored.
 - [x] Report the current-iOS Safari gate as release-blocking if it remains unavailable; do not label the branch release-ready while that gate is open.
+
+### Task 7: Resolve final whole-sprint review findings
+
+- [x] Reproduce and repair queued text-effect observer delivery after destroy; verify owner reuse and cleanup remain intact.
+- [x] Reproduce and repair mobile-menu focus loss with literal containment, native default-action focus fixup, and destroy-cancellation coverage.
+- [x] Close the two deferred navigation test-quality observations and correct the Sites worker restoration path.
+- [x] Verify the final focus timing at 390 px with the real page and preserve the correct sticky-header anchor landing.
+- [x] Rerun the full test, resume, Sites, and ordinary Astro build gates; retain current-iOS Safari as release-blocking.
