@@ -71,12 +71,13 @@ No P0 defect was reproduced. The sprint fixed five P1 defects and one P2 defect.
 | `git diff --check` | Passed; no tracked whitespace errors. |
 | `git diff --check -- scripts/test-motion-navigation-wipe.mjs src/scripts/motion/navigation-wipe.mjs` | Exit 0 with no output. |
 | `git diff --check -- scripts/test-motion-text-effects.mjs src/scripts/motion/text-effects.mjs` | Completed cleanly; no unrelated scoped changes. |
-| `git status --short` | Exit 0; at verified implementation HEAD, only the pre-existing untracked release-hardening plan was reported. |
+| `git status --short` | Historical check at `8189eff`: only the then-untracked release-hardening plan. Final check after `159f4d2`: clean. |
 | `git show --check --oneline --stat HEAD` | Completed without whitespace diagnostics for the marquee commit. |
 | `git show --format= --name-only HEAD` | Listed only `scripts/test-motion-marquee.mjs` and `src/scripts/motion/marquee.mjs`. |
-| `git show --stat --oneline <commit>` | Run for all four sprint commits; recorded stats matched their scoped file sets. |
-| `git show --format=fuller --find-renames <commit>` | Full diffs reviewed for all four sprint commits; no release concern found. |
-| `git show --format='%H %s' --name-only <commit>` | Corroborated all four sprint commit hashes, subjects, and file lists. |
+| `git show --stat --oneline <commit>` | Run for the original four implementation commits through `8189eff`; recorded stats matched their scoped file sets. |
+| `git show --format=fuller --find-renames <commit>` | Full diffs reviewed for the original four implementation commits through `8189eff`; no release concern found. |
+| `git show --format='%H %s' --name-only <commit>` | Corroborated the original four implementation commit hashes, subjects, and file lists. |
+| Scoped review package `875b104..159f4d2` | Audited all four final-fix commits; queued-observer, focus, worker-path, and deferred-test findings were resolved with no implementation issue. |
 | `ASTRO_TELEMETRY_DISABLED=1 npm run preview -- --host 127.0.0.1 --port 48731` | Initial sandbox bind failed with `listen EPERM`; the approved-localhost rerun became ready at `http://127.0.0.1:48731/`. |
 | `curl --silent --show-error --max-time 2 http://127.0.0.1:48731/` after shutdown | Exit 7 (`Couldn't connect`), confirming the sprint preview was stopped. |
 | `xcrun --find Simulator` | Failed: utility was not a developer tool or on `PATH`. |
