@@ -234,7 +234,16 @@ function createHarness({
     },
     clock: () => now,
     observerFactory: observer ? (callback) => {
-      intersectionObserver = { observed: [], observe(zone) { this.observed.push(zone); }, disconnect() {}, emit(records) { callback(records); } };
+      intersectionObserver = {
+        callback,
+        disconnected: false,
+        observed: [],
+        takeRecordsCalls: 0,
+        observe(zone) { this.observed.push(zone); },
+        takeRecords() { this.takeRecordsCalls += 1; return []; },
+        disconnect() { this.disconnected = true; },
+        emit(records) { this.callback(records); },
+      };
       return intersectionObserver;
     } : () => null,
   };
@@ -509,6 +518,28 @@ test('direct text-effects destroy invalidates queued burst follow-ups', () => {
   assert.equal(harness.projectVisual.textContent, 'AURORA');
   assert.equal(harness.context.coordinator.owner, null);
   assert.equal(harness.requested.size, 0);
+});
+
+test('a queued observer delivery after destroy cannot restore shake state or release a reused owner', () => {
+  const harness = createHarness();
+  trigger(harness, harness.heroTitle);
+  harness.controller.update(0);
+  trigger(harness, harness.project);
+  harness.controller.update(100);
+
+  const staleObserverCallback = harness.intersectionObserver.callback;
+  harness.controller.destroy();
+  assert.equal(harness.context.coordinator.claim('shake:cover-title', 1), true);
+  staleObserverCallback([{ target: harness.hero, isIntersecting: false }]);
+
+  assert.equal(harness.heroTitle.style.values.size, 0);
+  assert.equal(harness.heroTitle.getAttribute('data-motion-active'), null);
+  assert.equal(harness.project.getAttribute('data-active'), null);
+  assert.equal(harness.project.getAttribute('data-motion-enhanced'), null);
+  assert.equal(harness.projectText.textContent, 'AURORA');
+  assert.equal(harness.projectVisual.textContent, 'AURORA');
+  assert.equal(harness.requested.size, 0);
+  assert.equal(harness.context.coordinator.owner, 'shake:cover-title');
 });
 
 test('burst follow-ups use the original activation time and stale hidden work stays idle', () => {

@@ -172,9 +172,11 @@ export function mountTextEffects(context) {
       }
     },
     destroy() {
+      if (destroyed) return;
       destroyed = true;
       listeners.abort();
       context.signal?.removeEventListener?.('abort', abortListeners);
+      visibilityObserver?.takeRecords?.();
       visibilityObserver?.disconnect();
       for (const entry of shakes) {
         cancelShake(entry);
@@ -191,6 +193,7 @@ export function mountTextEffects(context) {
   };
 
   function applyZoneVisibility(zone, nextVisible) {
+    if (destroyed) return;
     if (zoneVisibility.get(zone) === nextVisible) return;
     zoneVisibility.set(zone, nextVisible);
     if (nextVisible) return;
@@ -201,6 +204,7 @@ export function mountTextEffects(context) {
   }
 
   visibilityObserver = context.observerFactory((records) => {
+    if (destroyed) return;
     for (const record of records) {
       if (zoneVisibility.has(record.target)) {
         applyZoneVisibility(record.target, record.isIntersecting);
