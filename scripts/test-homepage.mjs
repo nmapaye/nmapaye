@@ -335,7 +335,12 @@ test('infinite grid is a static 16-tile fallback without duplicate links', async
 });
 
 test('project cards keep their existing semantic content while exposing four decorative stacks', async () => {
-  const html = await readHomepage();
+  const [html, cardStack, poster, projects] = await Promise.all([
+    readHomepage(),
+    readSource('src/components/effects/CardStack.astro'),
+    readSource('src/components/effects/ProjectPoster.astro'),
+    readSource('src/components/Projects.astro'),
+  ]);
   assert.equal((html.match(/data-motion-card=/g) ?? []).length, 4);
   assert.equal((html.match(/class="card-stack__stage"/g) ?? []).length, 4);
   assert.equal((html.match(/data-motion-card-layer=/g) ?? []).length, 12);
@@ -345,6 +350,9 @@ test('project cards keep their existing semantic content while exposing four dec
   assert.match(html, /href="\/writing\/aurora-private-caffeine-tracking\/"/);
   assert.match(html, /href="https:\/\/github\.com\/nmapaye\/embnode"/);
   assert.match(html, /DMA sampling with prioritized FreeRTOS tasks/);
+  assert.doesNotMatch(cardStack, /card-stack__metadata/);
+  assert.match(poster, /variant !== 'stack' && \(\s*<figcaption>/);
+  assert.match(projects, /\.work-feature__links\s*\{[\s\S]*?display:\s*flex;[\s\S]*?margin-top:\s*1\.5rem;/);
 });
 
 test('stack poster geometry stays inside a clipped card-stack stage', async () => {

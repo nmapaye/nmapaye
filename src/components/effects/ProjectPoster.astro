@@ -22,11 +22,13 @@ const detail = project.metrics?.[0]
   aria-hidden="true"
 >
   <img src={background} alt="" width="1200" height="1500" loading="lazy" />
-  <figcaption>
-    <span>{project.index}</span>
-    <strong>{project.name}</strong>
-    {project.period && <small>{project.period}</small>}
-    <small>{project.stack.slice(0, 3).join(' / ')}</small>
-    <small>{detail}</small>
-  </figcaption>
+  {variant !== 'stack' && (
+    <figcaption>
+      <span>{project.index}</span>
+      <strong>{project.name}</strong>
+      {project.period && <small>{project.period}</small>}
+      <small>{project.stack.slice(0, 3).join(' / ')}</small>
+      <small>{detail}</small>
+    </figcaption>
+  )}
 </figure>

@@ -316,13 +316,11 @@
   transform-style: preserve-3d;
 }
 
-.card-stack__layer,
-.card-stack__metadata {
+.card-stack__layer {
   transition: transform 220ms cubic-bezier(.2, .8, .2, 1), opacity 160ms linear;
 }
 
-.card-stack[data-motion-static] .card-stack__layer,
-.card-stack[data-motion-static] .card-stack__metadata {
+.card-stack[data-motion-static] .card-stack__layer {
   transition: none;
 }
 
@@ -346,16 +344,6 @@
   --stack-rotate: 3deg;
 }
 
-.card-stack__metadata {
-  position: absolute;
-  inset: auto 0 0;
-  opacity: 0;
-}
-
-.card-stack[data-expanded] .card-stack__metadata {
-  opacity: 1;
-}
-
 @supports not (transform-style: preserve-3d) {
   .card-stack { perspective: none; }
 
@@ -375,8 +363,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card-stack__layer,
-  .card-stack__metadata {
+  .card-stack__layer {
     transition: none;
   }
 
@@ -394,9 +381,6 @@
     --stack-static-y: 4%;
   }
 
-  .card-stack__metadata {
-    opacity: 1;
-  }
 }
 
 @media (max-width: 639px) {

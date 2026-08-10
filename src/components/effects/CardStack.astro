@@ -7,12 +7,6 @@ interface Props {
 }
 
 const { project } = Astro.props;
-const metadata = project.featured
-  ? [
-      ...project.facts,
-      ...(project.metrics ?? []).map((item) => `${item.value} / ${item.label}`),
-    ]
-  : [project.period, ...project.stack, ...project.facts].filter(Boolean);
 ---
 
 <div class="card-stack" data-motion-card-stack aria-hidden="true">
@@ -23,5 +17,4 @@ const metadata = project.featured
       </div>
     ))}
   </div>
-  <p class="card-stack__metadata">{metadata.slice(0, 3).join(' / ')}</p>
 </div>
