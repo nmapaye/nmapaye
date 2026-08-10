@@ -1,5 +1,5 @@
 ---
-title: "Building AURORA: Private Caffeine, Sleep, and Alertness Tracking"
+title: "Building AURORA"
 description: "How AURORA combines manual caffeine logs, optional Apple Health sleep data, a vigilance test, and private on-device storage."
 publishedDate: 2026-07-27
 tags:
@@ -10,16 +10,15 @@ tags:
   - Privacy
 ---
 
-AURORA started with a narrow product question: can a caffeine tracker explain
-how intake timing relates to sleep and alertness without requiring an account or
-sending personal health information to a server?
+Building AURORA started with a question from myself :P how can I monitor my caffeine intake effectively?
 
-The current iPhone and iPad app combines manual caffeine logging, optional sleep
-import, a short reaction-time test, and on-device summaries. It is deliberately
-not a medical device. The guidance is informational, and the app does not
-diagnose, treat, or prevent any condition.
+Most people (sane ones at that) would understand that drinking caffeine past 2pm is a poor idea, but I wanted to take the idea one step further and understand just how bad taking caffeine would be at unideal points in time!
 
-## Make the manual path complete
+Some of my use-cases so far have been when I'm travelling and need to stay awake on flights, or during busy study/work sessions that require me to keep concentrated focus, and the PVT system I implemented acting as a safety guard against being fatigued while driving (and funnily enough an working as addictive game between my friends to determine whose the most alert!)
+
+Anyways below is some AI-slop which was generated as essentially a long README if you're interested about the metal of it all, please enjoy the readthrough, and more importantly, thank you for taking the time to read my little blog!
+
+## Make the manual path unified
 
 The core experience cannot depend on Apple Health. A user can log a dose with a
 timestamp and milligram amount, review daily totals, set a preferred cutoff, and
@@ -30,7 +29,7 @@ unavailable, denied, or contains no recent sleep samples, AURORA stays usable.
 Sample data is also available for exploring the interface without entering
 personal information.
 
-## Keep Health access narrow
+## Minimize Health access
 
 HealthKit access is optional and read-only. AURORA requests sleep analysis data
 and never asks for write permissions.
@@ -49,7 +48,7 @@ That boundary makes the permission states explicit:
   an empty result as an error.
 - **Interrupted import:** the next launch returns to a retryable idle state.
 
-## Persist locally and recover safely
+## Persists locally
 
 The application state is managed with Zustand and persisted on-device through
 MMKV. Caffeine doses, sleep sessions, vigilance sessions, preferences, and
@@ -64,7 +63,7 @@ There is currently no cloud sync. That is a product limitation, but it also
 keeps the privacy model easy to explain: the app does not require a backend
 account to provide its core experience.
 
-## Treat alertness as a signal, not a verdict
+## Treat alertness as a key signal
 
 The vigilance test is a 60-second reaction exercise. Completed sessions are
 stored alongside caffeine and sleep data so the Insights screen can show recent

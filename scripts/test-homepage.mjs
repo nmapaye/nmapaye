@@ -349,7 +349,7 @@ test('project cards keep their existing semantic content while exposing four dec
   assert.equal((html.match(/class="project-card"/g) ?? []).length, 3);
   assert.match(html, /href="\/writing\/aurora-private-caffeine-tracking\/"/);
   assert.match(html, /href="https:\/\/github\.com\/nmapaye\/embnode"/);
-  assert.match(html, /DMA sampling with prioritized FreeRTOS tasks/);
+  assert.match(html, /Three-stage pipeline for sampling, aggregation, and MQTT\/HTTP delivery/);
   assert.doesNotMatch(cardStack, /card-stack__metadata/);
   assert.match(poster, /variant !== 'stack' && \(\s*<figcaption>/);
   assert.match(projects, /\.work-feature__links\s*\{[\s\S]*?display:\s*flex;[\s\S]*?margin-top:\s*1\.5rem;/);
@@ -669,7 +669,8 @@ test('homepage work navigation targets rendered work and includes AURORA facts',
 
   assert.match(homepage, /href="\/#work"/);
   assert.match(homepage, /<section id="work"/);
-  assert.match(homepage, /Optional, read-only Apple Health sleep import/);
+  assert.match(homepage, /Three workflows: caffeine logging/);
+  assert.match(homepage, /AsyncStorage and SQLite/);
 });
 
 test('work chapter leads with factual AURORA metrics and keeps all projects', async () => {
@@ -775,10 +776,7 @@ test('notes and contact close the issue with the approved voice and photos', asy
   assert.match(html, /id="notes"/);
   assert.match(text, /03\s*\/\s*Notes/i);
   assert.match(text, /NOTES\s*FROM\s*THE\s*UNDERGROUND/i);
-  assert.match(
-    text,
-    /Building AURORA: Private Caffeine, Sleep, and Alertness Tracking/,
-  );
+  assert.match(text, /Building AURORA/);
   assert.match(html, /href="\/writing\/aurora-private-caffeine-tracking\/?"/);
   assert.ok(chapterIndex, 'homepage renders the Chapter Index navigation');
   assert.match(chapterIndex, /href="#notes"/);
@@ -883,7 +881,9 @@ test('experience chapter emphasizes systems, security, and product', async () =>
   assert.match(text, /SYSTEMS\.\s*SECURITY\.\s*PRODUCT\./i);
 
   for (const [role, organization] of [
-    ['AI Fellow', 'Handshake'],
+    ['LLM Specialist', 'Frontier AI Lab'],
+    ['Cyber Security AI Red-Teamer Intern', 'CFX Indonesia'],
+    ['Subject Matter Expert \\(SME\\), AI Alignment', 'Handshake'],
     ['Linear Algebra Tutor', 'UCSC ACE'],
     ['Data Center Engineering Intern', 'Bitera D\.C'],
     ['Cyber Security Analyst Intern', 'Xapiens Teknologi Indonesia'],
@@ -892,12 +892,18 @@ test('experience chapter emphasizes systems, security, and product', async () =>
     assert.match(text, new RegExp(organization));
   }
 
-  assert.match(text, /authenticated testing/i);
-  assert.match(text, /incident postmortems/i);
-  assert.match(text, /CVSS ≥ 9/);
-  assert.match(text, /authenticated scans/i);
-  assert.match(text, /PoC-backed remediation reports/i);
-  assert.match(text, /CVSS ≥ 8/);
+  assert.match(text, /520\+ frontier AI outputs/i);
+  assert.match(text, /70\+ recurring failure patterns/i);
+  assert.match(text, /89% of reviewed cases/i);
+  assert.match(text, /30\+ assets/i);
+  assert.match(text, /27\+ vulnerabilities/i);
+  assert.match(text, /OJK-regulated/i);
+  assert.match(text, /8\+ repository-level software tasks/i);
+  assert.match(text, /structured rubrics/i);
+  assert.match(text, /16\+ high-severity web findings/i);
+  assert.match(text, /five live data-center domains/i);
+  assert.match(text, /50\+ endpoints/i);
+  assert.match(text, /CVSS 8\.0\+ findings/i);
   assert.match(text, /University of California, Santa Cruz/);
   assert.match(text, /B\.S\., Technology &amp; Information Management/);
   assert.match(text, /C\+\+23/);
@@ -926,15 +932,15 @@ test('experience chapter emphasizes systems, security, and product', async () =>
     /srcset="[^"]+\.webp 480w, [^"]+\.webp 720w, [^"]+\.webp 960w"/,
   );
 
-  assert.equal(timelineEntries.length, 4, 'Experience renders four timeline entries');
+  assert.equal(timelineEntries.length, 6, 'Experience renders six timeline entries');
   const roleBulletCounts = timelineEntries.map((entry) => {
     const roleBullets = entry.match(/<ul\b[^>]*>([\s\S]*?)<\/ul>/)?.[1] ?? '';
 
     return (roleBullets.match(/<li\b/g) ?? []).length;
   });
 
-  assert.deepEqual(roleBulletCounts, [2, 2, 2, 2]);
-  assert.equal(roleBulletCounts.reduce((total, count) => total + count, 0), 8);
+  assert.deepEqual(roleBulletCounts, [2, 2, 2, 2, 2, 2]);
+  assert.equal(roleBulletCounts.reduce((total, count) => total + count, 0), 12);
 });
 
 test('built experience chapter uses the approved compact mobile layout', async () => {
@@ -994,7 +1000,7 @@ test('built experience chapter uses the approved compact mobile layout', async (
     narrowCss,
     /grid-template-columns:\s*3rem/,
   );
-  assert.equal((experienceChapter.match(/class="experience__index"/g) ?? []).length, 4);
+  assert.equal((experienceChapter.match(/class="experience__index"/g) ?? []).length, 6);
   assert.equal((experienceChapter.match(/class="experience__credentials"/g) ?? []).length, 1);
   assert.match(
     experienceChapter,

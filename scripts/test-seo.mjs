@@ -160,9 +160,10 @@ test('all public pages omit private and legacy identity details', async () => {
 test('homepage describes AURORA using its current on-device implementation', async () => {
   const html = await readOutput('index.html');
 
-  assert.match(html, /optional, read-only Apple Health sleep import/i);
-  assert.match(html, /MMKV/);
-  assert.doesNotMatch(html, /SQLite/);
+  assert.match(html, /optional read-only Apple Health access/i);
+  assert.match(html, /AsyncStorage/);
+  assert.match(html, /SQLite/);
+  assert.doesNotMatch(html, /MMKV/);
 });
 
 test('crawler discovery files point at the canonical domain', async () => {
@@ -184,7 +185,7 @@ test('writing index publishes the AURORA case study', async () => {
     /href="\/writing\/aurora-private-caffeine-tracking\/?"/,
     'writing index must link to the AURORA case study',
   );
-  assert.match(html, /Building AURORA: Private Caffeine, Sleep, and Alertness Tracking/);
+  assert.match(html, /Building AURORA/);
 });
 
 test('AURORA case study publishes grounded BlogPosting authorship', async () => {
@@ -202,7 +203,7 @@ test('AURORA case study publishes grounded BlogPosting authorship', async () => 
   assert.equal(article['@id'], `${articleUrl}#article`);
   assert.equal(
     article.headline,
-    'Building AURORA: Private Caffeine, Sleep, and Alertness Tracking',
+    'Building AURORA',
   );
   assert.equal(article.datePublished, '2026-07-27T00:00:00.000Z');
   assert.equal(article.dateModified, '2026-07-27T00:00:00.000Z');
