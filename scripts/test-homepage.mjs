@@ -337,6 +337,7 @@ test('infinite grid is a static 16-tile fallback without duplicate links', async
 test('project cards keep their existing semantic content while exposing four decorative stacks', async () => {
   const html = await readHomepage();
   assert.equal((html.match(/data-motion-card=/g) ?? []).length, 4);
+  assert.equal((html.match(/class="card-stack__stage"/g) ?? []).length, 4);
   assert.equal((html.match(/data-motion-card-layer=/g) ?? []).length, 12);
   assert.equal((html.match(/data-motion-card-layer=[^>]*aria-hidden="true"/g) ?? []).length, 12);
   assert.equal((html.match(/class="work-feature"/g) ?? []).length, 1);
@@ -346,7 +347,7 @@ test('project cards keep their existing semantic content while exposing four dec
   assert.match(html, /DMA sampling with prioritized FreeRTOS tasks/);
 });
 
-test('stack poster geometry stays inside the fixed card-stack region', async () => {
+test('stack poster geometry stays inside a clipped card-stack stage', async () => {
   const builtCss = await readBuiltCss();
   const stackPoster = findExactCssRule(
     builtCss,
@@ -356,6 +357,17 @@ test('stack poster geometry stays inside the fixed card-stack region', async () 
   assert.ok(stackPoster, 'built CSS is missing the stack-poster geometry rule');
   assert.match(stackPoster, /height:\s*100%/);
   assert.match(stackPoster, /aspect-ratio:\s*auto/);
+
+  const stackStage = findExactCssRule(
+    builtCss,
+    /^\.card-stack__stage$/,
+  );
+  assert.ok(stackStage, 'built CSS is missing the stack-stage containment rule');
+  assert.match(stackStage, /position:\s*absolute/);
+  assert.match(stackStage, /inset:\s*0/);
+  assert.match(stackStage, /overflow:\s*clip/);
+  assert.match(stackStage, /contain:\s*paint/);
+  assert.match(stackStage, /isolation:\s*isolate/);
 });
 
 test('narrow card stacks keep a visible fan inside the mobile gutter', async () => {
@@ -406,10 +418,10 @@ test('narrow card stacks keep a visible fan inside the mobile gutter', async () 
 
   const desktopLeft = findExactCssRule(authoredCss, selectors.leftExpanded);
   const desktopRight = findExactCssRule(authoredCss, selectors.rightExpanded);
-  assert.equal(readNumber(desktopLeft, 'stack-x', '%'), -12);
-  assert.equal(readNumber(desktopRight, 'stack-x', '%'), 12);
-  assert.equal(readNumber(desktopLeft, 'stack-rotate', 'deg'), -5);
-  assert.equal(readNumber(desktopRight, 'stack-rotate', 'deg'), 5);
+  assert.equal(readNumber(desktopLeft, 'stack-x', '%'), -8);
+  assert.equal(readNumber(desktopRight, 'stack-x', '%'), 8);
+  assert.equal(readNumber(desktopLeft, 'stack-rotate', 'deg'), -3);
+  assert.equal(readNumber(desktopRight, 'stack-rotate', 'deg'), 3);
 });
 
 test('text motion retains eight semantic labels behind hidden visual overlays', async () => {
@@ -592,10 +604,10 @@ test('final review contracts keep the release gate, resilient masthead, and lega
   assert.match(workflow, /- name: Test site\s+run: npm test/);
   assert.doesNotMatch(workflow, /run: npm run build/);
   assert.doesNotMatch(workflow, /run: npm run test:seo/);
-  assert.match(workflow, /- name: Generate public résumé\s+run: python scripts\/build-resume\.py public\/resume\.pdf/);
+  assert.doesNotMatch(workflow, /build-resume\.py public\/resume\.pdf/);
   assert.match(workflow, /- name: Test public resume\s+run: python scripts\/test-resume\.py/);
   assert.match(workflow, /uses: actions\/upload-pages-artifact@v3[\s\S]*?path: \.\/dist/);
-  assert.match(readme, /python3 scripts\/build-resume\.py public\/resume\.pdf\s+npm test\s+python3 scripts\/test-resume\.py/);
+  assert.match(readme, /public\/resume\.pdf.*file deployed by\s+the site/s);
 
   assert.match(
     nav,

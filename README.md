@@ -1,6 +1,6 @@
 # Nathaniel Mapaye
 
-Software Engineer building reliable systems, developer tools, and privacy-conscious mobile products.
+Software Engineer
 
 ![C++](https://img.shields.io/badge/C%2B%2B-23-informational)
 ![Go](https://img.shields.io/badge/Go-informational)
@@ -35,7 +35,6 @@ nmapaye@ucsc.edu • [LinkedIn](https://www.linkedin.com/in/nmapaye) • [Websit
 ```sh
 npm ci
 python3 -m pip install -r requirements-test.txt
-python3 scripts/build-resume.py public/resume.pdf
 npm test
 python3 scripts/test-resume.py
 ```
@@ -54,5 +53,5 @@ static assets), run:
 npm run test:sites
 ```
 
-The generated one-page résumé is committed at `public/resume.pdf`. Rebuild and
-test it after changing its source content.
+The committed one-page résumé at `public/resume.pdf` is the file deployed by
+the site. Replace it with the latest PDF, then run the tests above.

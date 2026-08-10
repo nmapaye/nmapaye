@@ -42,9 +42,6 @@ jobs:
       - name: Install document test dependencies
         run: python -m pip install --disable-pip-version-check -r requirements-test.txt
 
-      - name: Generate public résumé
-        run: python scripts/build-resume.py public/resume.pdf
-
       - name: Test site
         run: npm test
 

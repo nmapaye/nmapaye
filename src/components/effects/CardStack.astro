@@ -16,10 +16,12 @@ const metadata = project.featured
 ---
 
 <div class="card-stack" data-motion-card-stack aria-hidden="true">
-  {[0, 1, 2].map((layer) => (
-    <div class="card-stack__layer" data-motion-card-layer={layer} aria-hidden="true">
-      <ProjectPoster project={project} variant="stack" layer={layer} />
-    </div>
-  ))}
+  <div class="card-stack__stage">
+    {[0, 1, 2].map((layer) => (
+      <div class="card-stack__layer" data-motion-card-layer={layer} aria-hidden="true">
+        <ProjectPoster project={project} variant="stack" layer={layer} />
+      </div>
+    ))}
+  </div>
   <p class="card-stack__metadata">{metadata.slice(0, 3).join(' / ')}</p>
 </div>

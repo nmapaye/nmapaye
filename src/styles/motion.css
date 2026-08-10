@@ -299,6 +299,14 @@
   pointer-events: none;
 }
 
+.card-stack__stage {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  contain: paint;
+  isolation: isolate;
+}
+
 .card-stack__layer {
   position: absolute;
   inset: 0;
@@ -319,23 +327,23 @@
 }
 
 .card-stack[data-expanded] [data-motion-card-layer="0"] {
-  --stack-x: -12%;
-  --stack-y: 5%;
+  --stack-x: -8%;
+  --stack-y: 3%;
   --stack-z: -20px;
-  --stack-rotate: -5deg;
+  --stack-rotate: -3deg;
 }
 
 .card-stack[data-expanded] [data-motion-card-layer="1"] {
   --stack-x: 0%;
-  --stack-y: -3%;
+  --stack-y: -2%;
   --stack-z: 0px;
 }
 
 .card-stack[data-expanded] [data-motion-card-layer="2"] {
-  --stack-x: 12%;
-  --stack-y: 5%;
+  --stack-x: 8%;
+  --stack-y: 3%;
   --stack-z: 20px;
-  --stack-rotate: 5deg;
+  --stack-rotate: 3deg;
 }
 
 .card-stack__metadata {
@@ -356,13 +364,13 @@
   }
 
   .card-stack[data-expanded] [data-motion-card-layer="0"] {
-    --stack-flat-x: -10%;
-    --stack-flat-y: 4%;
+    --stack-flat-x: -7%;
+    --stack-flat-y: 3%;
   }
 
   .card-stack[data-expanded] [data-motion-card-layer="2"] {
-    --stack-flat-x: 10%;
-    --stack-flat-y: 4%;
+    --stack-flat-x: 7%;
+    --stack-flat-y: 3%;
   }
 }
 
