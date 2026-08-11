@@ -20,9 +20,12 @@ const { project } = Astro.props;
   </div>
   <p class="project-card__tagline">{project.tagline}</p>
   <p>{project.description}</p>
-  <ul class="project-card__facts">
-    {project.facts.map((fact) => <li>{fact}</li>)}
-  </ul>
+  <dl class="project-card__focus">
+    <div><dt>Problem</dt><dd>{project.focus.problem}</dd></div>
+    <div><dt>System design</dt><dd>{project.focus.systemDesign}</dd></div>
+    <div><dt>Evidence</dt><dd>{project.focus.evidence}</dd></div>
+    <div><dt>Outcome</dt><dd>{project.focus.outcome}</dd></div>
+  </dl>
   <ul class="project-card__stack" aria-label={`${project.name} technologies`}>
     {project.stack.map((tech) => <li>{tech}</li>)}
   </ul>
@@ -68,11 +71,19 @@ const { project } = Astro.props;
     text-transform: uppercase;
   }
 
-  .project-card__facts {
+  .project-card__focus {
     display: grid;
     gap: 0.5rem;
-    padding-left: 1.1rem;
+    margin: 0;
   }
+
+  .project-card__focus div { display: grid; gap: 0.2rem; }
+  .project-card__focus dt {
+    font: 900 0.62rem/1.2 var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .project-card__focus dd { font-size: 0.86rem; line-height: 1.35; }
 
   .project-card__stack {
     margin-top: auto;

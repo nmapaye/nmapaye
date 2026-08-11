@@ -1,0 +1,53 @@
+---
+const ranges = [
+  ['Systems', 'C++23 concurrency, FreeRTOS, embedded telemetry'],
+  ['Security', 'Application testing, remediation evidence'],
+  ['AI infrastructure', 'Evaluation systems, reproducible software analysis'],
+];
+---
+
+<section class="operating-range" aria-labelledby="operating-range-title">
+  <h2 id="operating-range-title">Operating range</h2>
+  <dl>
+    {ranges.map(([label, detail]) => (
+      <div>
+        <dt>{label}</dt>
+        <dd>{detail}</dd>
+      </div>
+    ))}
+  </dl>
+</section>
+
+<style>
+  .operating-range {
+    display: grid;
+    grid-template-columns: minmax(11rem, 0.35fr) minmax(0, 1fr);
+    border-bottom: var(--rule);
+    background: var(--paper);
+  }
+
+  .operating-range h2 {
+    padding: 1.5rem;
+    border-right: var(--rule);
+    font: 900 clamp(1.7rem, 3vw, 3rem)/0.9 var(--font-display);
+    letter-spacing: -0.035em;
+    text-transform: uppercase;
+  }
+
+  .operating-range dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .operating-range dl > div { padding: 1.5rem; border-right: var(--rule); }
+  .operating-range dl > div:last-child { border-right: 0; }
+  .operating-range dt { font: 900 0.7rem/1.2 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; }
+  .operating-range dd { margin-top: 0.55rem; font-size: 0.9rem; font-weight: 700; line-height: 1.35; }
+
+  @media (max-width: 959px) {
+    .operating-range { grid-template-columns: 1fr; }
+    .operating-range h2 { border-right: 0; border-bottom: var(--rule); }
+  }
+
+  @media (max-width: 639px) {
+    .operating-range dl { grid-template-columns: 1fr; }
+    .operating-range dl > div { border-right: 0; border-bottom: 2px solid var(--ink); }
+    .operating-range dl > div:last-child { border-bottom: 0; }
+  }
+</style>

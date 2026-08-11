@@ -12,6 +12,7 @@ interface Props {
   ogType?: 'website' | 'article';
   structuredData?: Record<string, unknown>;
   kinetic?: boolean;
+  motion?: boolean;
 }
 
 const {
@@ -20,6 +21,7 @@ const {
   ogType = 'website',
   structuredData,
   kinetic = false,
+  motion = true,
 } = Astro.props;
 
 const base = import.meta.env.BASE_URL;
@@ -72,6 +74,6 @@ const ogImageAlt = `${profile.name} — ${profile.title} portfolio`;
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
     <slot />
-    <MotionLayer kinetic={kinetic} />
+    {motion && <MotionLayer kinetic={kinetic} />}
   </body>
 </html>

@@ -9,7 +9,7 @@ const articleUrl =
 const socialImageUrl = 'https://nmapaye.com/og.png';
 const socialImageWidth = 1731;
 const socialImageHeight = 909;
-const socialImageAlt = 'Nathaniel Mapaye — Software Engineer portfolio';
+const socialImageAlt = 'Nathaniel Mapaye — Systems Engineer, C++23 &#38; Embedded Software portfolio';
 const approvedProfiles = [
   'https://www.linkedin.com/in/nmapaye',
   'https://github.com/nmapaye',
@@ -107,6 +107,7 @@ test('homepage publishes one canonical professional identity', async () => {
   const documents = getJsonLdDocuments(html);
   const profilePage = getGraphNode(documents, 'ProfilePage');
   const person = getGraphNode(documents, 'Person');
+  const projectList = getGraphNode(documents, 'ItemList');
 
   assert.match(
     html,
@@ -125,8 +126,13 @@ test('homepage publishes one canonical professional identity', async () => {
   assert.equal(person['@id'], `${canonicalUrl}#person`);
   assert.equal(person.name, 'Nathaniel Mapaye');
   assert.equal(person.alternateName, 'Nathaniel Fransiscus Mapaye');
-  assert.equal(person.jobTitle, 'Software Engineer');
+  assert.equal(person.jobTitle, 'Systems Engineer, C++23 & Embedded Software');
   assert.deepEqual(person.sameAs, approvedProfiles);
+  assert.ok(profilePage.knowsAbout.includes('Lock-free concurrency'));
+  assert.ok(profilePage.knowsAbout.includes('AI evaluation'));
+  assert.equal(projectList.itemListElement.length, 3);
+  assert.equal(projectList.itemListElement[0].item['@type'], 'SoftwareSourceCode');
+  assert.match(projectList.itemListElement[0].item.codeRepository, /github\.com\/nmapaye\/embnode/);
 });
 
 test('all public pages omit private and legacy identity details', async () => {

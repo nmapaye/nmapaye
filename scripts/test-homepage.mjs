@@ -192,7 +192,7 @@ test('marquee fallback keeps duplicate tracks hidden yet measurable before enhan
   );
 });
 
-test('motion markup uses fixed decorative pools and canonical poster assets', async () => {
+test('motion markup defers decorative stickers and keeps canonical poster assets', async () => {
   const html = await readHomepage();
   const posterPaths = [
     'public/images/project-posters/aurora.svg',
@@ -206,7 +206,9 @@ test('motion markup uses fixed decorative pools and canonical poster assets', as
   );
   assert.match(html, /data-motion-root/);
   assert.equal((html.match(/data-motion-blob=/g) ?? []).length, 2);
-  assert.equal((html.match(/data-motion-sticker(?:\s|=)/g) ?? []).length, 24);
+  assert.equal((html.match(/data-motion-sticker(?:\s|=)/g) ?? []).length, 0);
+  assert.equal((html.match(/data-motion-sticker-template/g) ?? []).length, 1);
+  assert.match(html, /data-motion-sticker-sources=/);
   assert.equal((html.match(/data-motion-particle(?:\s|=)/g) ?? []).length, 8);
   assert.equal((html.match(/data-motion-wipe-panel/g) ?? []).length, 3);
   assert.match(html, /data-motion-root[^>]*aria-hidden="true"/);
@@ -256,7 +258,8 @@ test('built motion delivery keeps one shared module, stable posters, and writing
   const modulePath = moduleTag.match(/\bsrc="([^"]+)"/)?.[1];
   assert.ok(modulePath, 'homepage motion module has a source URL');
   assert.equal((html.match(/data-motion-blob=/g) ?? []).length, 2);
-  assert.equal((html.match(/data-motion-sticker=/g) ?? []).length, 24);
+  assert.equal((html.match(/data-motion-sticker=/g) ?? []).length, 0);
+  assert.equal((html.match(/data-motion-sticker-template/g) ?? []).length, 1);
   assert.equal((html.match(/data-motion-particle=/g) ?? []).length, 8);
   assert.equal((html.match(/data-motion-grid-tile=/g) ?? []).length, 16);
   assert.equal((html.match(/data-motion-card=/g) ?? []).length, 4);
@@ -330,8 +333,38 @@ test('infinite grid is a static 16-tile fallback without duplicate links', async
   for (const tile of tileRoots) assert.match(tile[0], /aria-hidden="true"/);
   assert.match(grid, /aria-hidden="true"/);
   assert.doesNotMatch(grid, /tabindex="0"|<a\b|<article\b/);
+  assert.doesNotMatch(grid, /<figcaption|<strong|<small/);
   assert.equal((html.match(/class="work-feature"/g) ?? []).length, 1);
   assert.equal((html.match(/class="project-card"/g) ?? []).length, 3);
+});
+
+test('homepage extraction keeps one canonical record for each project', async () => {
+  const html = await readHomepage();
+  const text = visibleText(html);
+  const claims = [
+    'Intermittent networks and low-power constraints make telemetry delivery unreliable.',
+    'Concurrent data-structure experiments need a small surface that makes correctness work explicit.',
+    'Canary releases need a clear decision path when service health changes.',
+    'Personal health signals need useful feedback without exporting sensitive data by default.',
+  ];
+
+  for (const claim of claims) {
+    assert.equal(text.split(claim).length - 1, 1, `expected one canonical project claim: ${claim}`);
+  }
+  assert.equal(text.split('SYSTEMS / SECURITY / PRODUCT').length - 1, 1);
+});
+
+test('about route is conventional, copyable, and free of motion markup', async () => {
+  const about = await readFile(new URL('about/index.html', outputRoot), 'utf8');
+  const text = visibleText(about);
+
+  assert.match(text, /Systems engineer who ships usable software\./);
+  assert.match(text, /Technical focus/);
+  assert.match(text, /Selected projects/);
+  assert.match(text, /Experience/);
+  assert.match(text, /Education/);
+  assert.match(text, /nmapaye@ucsc\.edu/);
+  assert.doesNotMatch(about, /data-motion-root|data-motion-kinetic|data-motion-sticker/);
 });
 
 test('project cards keep their existing semantic content while exposing four decorative stacks', async () => {
@@ -349,9 +382,9 @@ test('project cards keep their existing semantic content while exposing four dec
   assert.equal((html.match(/class="project-card"/g) ?? []).length, 3);
   assert.match(html, /href="\/writing\/aurora-private-caffeine-tracking\/"/);
   assert.match(html, /href="https:\/\/github\.com\/nmapaye\/embnode"/);
-  assert.match(html, /Three-stage pipeline for sampling, aggregation, and MQTT\/HTTP delivery/);
+  assert.match(html, /Intermittent networks and low-power constraints make telemetry delivery unreliable\./);
   assert.doesNotMatch(cardStack, /card-stack__metadata/);
-  assert.match(poster, /variant !== 'stack' && \(\s*<figcaption>/);
+  assert.doesNotMatch(poster, /figcaption/);
   assert.match(projects, /\.work-feature__links\s*\{[\s\S]*?display:\s*flex;[\s\S]*?margin-top:\s*1\.5rem;/);
 });
 
@@ -648,32 +681,33 @@ test('final review contracts keep the release gate, resilient masthead, and lega
   assert.doesNotMatch(global, /\.card\s*\{/);
 });
 
-test('site data carries the approved editorial copy and factual project metrics', async () => {
+test('site data carries systems-first copy and structured project evidence', async () => {
   const source = await readSource('src/data/site.ts');
 
   assert.match(
     source,
-    /Software engineer building from low-level systems to polished products\./,
+    /Systems engineer building C\+\+23 concurrency libraries, FreeRTOS telemetry, security-conscious software, and dependable product interfaces\./,
   );
   assert.match(source, /label: 'Notes', href: '\/writing\/'/);
-  assert.match(source, /value: 'Read-only', label: 'Apple Health access'/);
-  assert.match(source, /value: '60 sec', label: 'Vigilance test'/);
-  assert.match(source, /index: '01'/);
+  assert.match(source, /name: 'EmbNode'/);
+  assert.match(source, /focus: \{/);
+  assert.match(source, /systemDesign:/);
+  assert.match(source, /evidence:/);
   assert.match(source, /export const featuredSkills/);
   assert.doesNotMatch(source, /0 cloud/i);
   assert.doesNotMatch(source, /proof, not prose/i);
 });
 
-test('homepage work navigation targets rendered work and includes AURORA facts', async () => {
+test('homepage work navigation targets rendered work and leads with systems evidence', async () => {
   const homepage = await readHomepage();
 
   assert.match(homepage, /href="\/#work"/);
   assert.match(homepage, /<section id="work"/);
-  assert.match(homepage, /Three workflows: caffeine logging/);
-  assert.match(homepage, /AsyncStorage and SQLite/);
+  assert.match(homepage, /Intermittent networks and low-power constraints make telemetry delivery unreliable/);
+  assert.match(homepage, /CRC and decode checks run in a 0\.47-second host simulation/);
 });
 
-test('work chapter leads with factual AURORA metrics and keeps all projects', async () => {
+test('work chapter leads with EmbNode and keeps structured evidence for every project', async () => {
   const html = await readHomepage();
   const workChapter = html.match(/<section id="work"[^>]*>([\s\S]*?)<\/section>/)?.[0];
 
@@ -682,41 +716,40 @@ test('work chapter leads with factual AURORA metrics and keeps all projects', as
   const text = visibleText(workChapter);
   const workFeature = workChapter.match(/<article class="work-feature"[^>]*>[\s\S]*?<\/article>/)?.[0];
   const secondaryPanels = workChapter.match(/<article class="project-card"[^>]*>[\s\S]*?<\/article>/g) ?? [];
-  const embNode = secondaryPanels.find((panel) => /<h3[^>]*>EmbNode<\/h3>/.test(panel));
+  const embNode = workFeature;
   const gitOps = secondaryPanels.find((panel) => /<h3[^>]*>GitOps<\/h3>/.test(panel));
   const sysLib = secondaryPanels.find((panel) => /<h3[^>]*>SysLib<\/h3>/.test(panel));
+  const aurora = secondaryPanels.find((panel) => /<h3[^>]*>AURORA<\/h3>/.test(panel));
 
   assert.equal((workChapter.match(/class="work-feature"/g) ?? []).length, 1);
   assert.equal(secondaryPanels.length, 3);
-  assert.ok(workFeature, 'Work chapter renders the featured AURORA panel');
-  assert.ok(embNode, 'Work chapter renders the EmbNode secondary panel');
+  assert.ok(workFeature, 'Work chapter renders the featured EmbNode panel');
   assert.ok(gitOps, 'Work chapter renders the GitOps secondary panel');
   assert.ok(sysLib, 'Work chapter renders the SysLib secondary panel');
+  assert.ok(aurora, 'Work chapter renders the AURORA product panel');
 
   assert.match(text, /01\s*\/\s*Work/i);
-  assert.match(text, /AURORA/);
-  assert.match(text, /60 sec/);
-  assert.match(text, /Vigilance test/);
-  assert.match(text, /Read-only/);
-  assert.match(text, /Apple Health access/);
-  assert.match(text, /iOS \+ iPad/);
+  assert.match(text, /EmbNode/);
+  assert.match(text, /0\.47 sec/);
+  assert.match(text, /Host simulation/);
+  assert.match(text, /0\.15 mA/);
+  assert.match(text, /Problem/);
+  assert.match(text, /System design/);
+  assert.match(text, /Evidence/);
+  assert.match(text, /Outcome/);
   assert.match(text, /EmbNode/);
   assert.match(text, /GitOps/);
   assert.match(text, /SysLib/);
-  assert.match(
-    workFeature,
-    /href="\/writing\/aurora-private-caffeine-tracking\/?"/,
-  );
-  assert.match(workFeature, /href="https:\/\/nmapaye\.github\.io\/aurora"/);
   assert.match(embNode, /href="https:\/\/github\.com\/nmapaye\/embnode"/);
   assert.match(visibleText(embNode), /FreeRTOS/);
   assert.match(visibleText(embNode), /DMA/);
   assert.match(gitOps, /href="https:\/\/github\.com\/nmapaye\/gitops"/);
   assert.match(visibleText(gitOps), /Prometheus/);
-  assert.match(visibleText(gitOps), /Automated rollback/);
+  assert.match(visibleText(gitOps), /rollback path triggers/);
   assert.match(sysLib, /href="https:\/\/github\.com\/nmapaye\/syslib"/);
   assert.match(visibleText(sysLib), /26\.9M/);
-  assert.match(visibleText(sysLib), /ThreadSanitizer/);
+  assert.match(visibleText(sysLib), /linearizability/);
+  assert.match(aurora, /href="\/writing\/aurora-private-caffeine-tracking\/?"/);
   assert.doesNotMatch(workChapter, /0 cloud/i);
   assert.doesNotMatch(workChapter, /proof, not prose/i);
 });
@@ -735,8 +768,11 @@ test('homepage renders the approved issue shell and cover', async () => {
   assert.match(text, /SYSTEMS\s*TO\s*SCREENS/i);
   assert.match(
     text,
-    /Software engineer building from low-level systems to polished products\./,
+    /I build concurrent runtimes, embedded telemetry, and dependable product surfaces, from atomics and firmware to mobile interfaces\./,
   );
+  assert.match(text, /Explore system builds/);
+  assert.match(text, /Operating range/);
+  assert.match(text, /C\+\+23 concurrency, FreeRTOS, embedded telemetry/);
   assert.match(text, /01\s*\/\s*Work/i);
   assert.match(text, /02\s*\/\s*Experience/i);
   assert.match(text, /03\s*\/\s*Notes/i);
@@ -1016,6 +1052,7 @@ test('homepage renders the final issue architecture without legacy chapters', as
 
   const chapterPositions = [
     main.indexOf('class="cover"'),
+    main.indexOf('class="operating-range"'),
     main.indexOf('class="chapter-index"'),
     main.indexOf('<section id="work"'),
     main.indexOf('<section id="experience"'),
@@ -1025,7 +1062,7 @@ test('homepage renders the final issue architecture without legacy chapters', as
 
   assert.ok(
     chapterPositions.every((position) => position >= 0),
-    'main contains the cover, chapter index, and four issue chapters',
+    'main contains the cover, operating range, chapter index, and four issue chapters',
   );
   assert.deepEqual(
     [...chapterPositions].sort((a, b) => a - b),
@@ -1034,7 +1071,7 @@ test('homepage renders the final issue architecture without legacy chapters', as
   );
   assert.match(html, /<header class="masthead"[^>]*>/);
   assert.match(html, /<footer class="footer"[^>]*>/);
-  assert.doesNotMatch(html, /id="about"/);
+  assert.match(html, /href="\/about\/"/);
   assert.doesNotMatch(html, /id="education"/);
   assert.doesNotMatch(html, /id="skills"/);
 });
@@ -1045,7 +1082,7 @@ test('homepage source composes only the final homepage sections', async () => {
   assert.doesNotMatch(source, /components\/(?:About|Education|Skills)\.astro/);
   assert.match(
     source,
-    /<Nav\s*\/>\s*<main id="main-content"[^>]*>\s*<Hero\s*\/>\s*<ChapterIndex\s*\/>\s*<Projects\s*\/>\s*<Experience\s*\/>\s*<Notes\s*\/>\s*<Contact\s*\/>\s*<\/main>\s*<Footer\s*\/>/,
+    /<Nav\s*\/>\s*<main id="main-content"[^>]*>\s*<Hero\s*\/>\s*<OperatingRange\s*\/>\s*<ChapterIndex\s*\/>\s*<Projects\s*\/>\s*<Experience\s*\/>\s*<Notes\s*\/>\s*<Contact\s*\/>\s*<\/main>\s*<Footer\s*\/>/,
   );
   assert.match(source, /<main id="main-content"[^>]*tabindex="-1"[^>]*>/);
 
@@ -1088,6 +1125,7 @@ test('homepage retains accessible destinations, a fixed palette, and resilient i
       .map(([, href, label]) => ({ href, label: visibleText(label) }));
   const expectedDestinations = [
     { href: '/#work', label: 'Work' },
+    { href: '/about/', label: 'About' },
     { href: '/#experience', label: 'Experience' },
     { href: '/writing/', label: 'Notes' },
     { href: '/#contact', label: 'Contact' },

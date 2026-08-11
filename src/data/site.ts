@@ -18,12 +18,20 @@ export interface ProjectMetric {
   label: string;
 }
 
+export interface ProjectFocus {
+  problem: string;
+  systemDesign: string;
+  evidence: string;
+  outcome: string;
+}
+
 export interface Project {
   index: string;
   name: string;
   tagline: string;
   description: string;
   facts: string[];
+  focus: ProjectFocus;
   metrics?: ProjectMetric[];
   featured?: boolean;
   period?: string;
@@ -53,12 +61,12 @@ export const profile = {
   name: 'Nathaniel Mapaye',
   fullName: 'Nathaniel Fransiscus Mapaye',
   canonicalUrl: 'https://nmapaye.com/',
-  title: 'Software Engineer',
+  title: 'Systems Engineer, C++23 & Embedded Software',
   location: 'Santa Cruz, CA',
   description:
-    'Software engineer building from low-level systems and security to polished products.',
+    'Systems engineer building C++23 concurrency libraries, FreeRTOS telemetry, security-conscious software, and dependable product interfaces.',
   tagline:
-    'Software engineer building from low-level systems to polished products.',
+    'I build concurrent runtimes, embedded telemetry, and dependable product surfaces, from atomics and firmware to mobile interfaces.',
   // Square photo lives at public/profile.jpg. Replace that file (keep the name)
   // to swap your picture, or change this path to a new filename.
   image: 'profile.jpg',
@@ -73,6 +81,7 @@ export const profile = {
 /* ------------------------------------------------------------------- nav -- */
 export const nav: NavItem[] = [
   { label: 'Work', href: '/#work' },
+  { label: 'About', href: '/about/' },
   { label: 'Experience', href: '/#experience' },
   { label: 'Notes', href: '/writing/' },
   { label: 'Contact', href: '/#contact' },
@@ -123,10 +132,87 @@ export const education: EducationItem[] = [
 export const projects: Project[] = [
   {
     index: '01',
+    name: 'EmbNode',
+    tagline: 'FreeRTOS telemetry node',
+    period: 'Aug 2025 — Sep 2025',
+    featured: true,
+    description:
+      'A C++23 FreeRTOS telemetry node for ESP32 and STM32 with deterministic DMA sampling, resilient MQTT/HTTP delivery, and low-power scheduling.',
+    facts: [
+      'Three-stage pipeline for sampling, aggregation, and MQTT/HTTP delivery',
+      'OTA and watchdog recovery for resilient low-power operation',
+      'CRC16-CCITT and telemetry decode validated in a 0.47-second host simulation',
+      '0.15 mA modeled average current with a 15-second sleep schedule',
+    ],
+    focus: {
+      problem: 'Intermittent networks and low-power constraints make telemetry delivery unreliable.',
+      systemDesign: 'C++23 FreeRTOS pipeline separates DMA sampling, aggregation, and delivery.',
+      evidence: 'CRC and decode checks run in a 0.47-second host simulation; modeled average current is 0.15 mA.',
+      outcome: 'MQTT/HTTP telemetry has watchdog and OTA recovery paths for unattended operation.',
+    },
+    metrics: [
+      { value: '0.47 sec', label: 'Host simulation' },
+      { value: '0.15 mA', label: 'Modeled average current' },
+      { value: 'C++23', label: 'FreeRTOS node' },
+    ],
+    stack: [
+      'C++23',
+      'FreeRTOS',
+      'ESP32 / STM32',
+      'MQTT / HTTP',
+      'OTA / Watchdog',
+      'CMake / CTest',
+    ],
+    links: [{ label: 'View EmbNode source', href: 'https://github.com/nmapaye/embnode' }],
+  },
+  {
+    index: '02',
+    name: 'SysLib',
+    tagline: 'Header-only C++23 concurrency library',
+    description:
+      'Lock-free queues and memory-reclamation experiments measured and verified as a focused systems library.',
+    facts: [
+      '26.9M SPSC operations per second on Apple M-class',
+      'ThreadSanitizer and linearizability checks',
+    ],
+    focus: {
+      problem: 'Concurrent data-structure experiments need a small surface that makes correctness work explicit.',
+      systemDesign: 'Header-only C++23 SPSC queues and memory-reclamation experiments isolate atomic operations.',
+      evidence: '26.9M SPSC operations per second on Apple M-class, with TSan and linearizability checks.',
+      outcome: 'A focused library for testing queue and reclamation designs before product use.',
+    },
+    stack: [
+      'C++23',
+      'Atomics',
+      'Lock-free',
+      'TSan',
+    ],
+    links: [{ label: 'View SysLib source', href: 'https://github.com/nmapaye/syslib' }],
+  },
+  {
+    index: '03',
+    name: 'GitOps',
+    tagline: 'SLO-driven canary operator',
+    description:
+      'A Go Kubernetes operator that turns service-level signals into automated canary decisions.',
+    facts: [
+      'Prometheus and Gatekeeper policy checks',
+      'Automated rollback in under 30 seconds on p95 regression',
+    ],
+    focus: {
+      problem: 'Canary releases need a clear decision path when service health changes.',
+      systemDesign: 'A Go Kubernetes operator combines Prometheus SLO signals with Gatekeeper policy checks.',
+      evidence: 'The rollback path triggers in under 30 seconds on a p95 regression.',
+      outcome: 'Release decisions become repeatable rather than dependent on manual monitoring.',
+    },
+    stack: ['Go', 'Kubernetes', 'Prometheus', 'ArgoCD'],
+    links: [{ label: 'View GitOps source', href: 'https://github.com/nmapaye/gitops' }],
+  },
+  {
+    index: '04',
     name: 'AURORA',
     tagline: 'Private caffeine, sleep, and alertness tracking',
     period: 'Aug 2025 — Present',
-    featured: true,
     description:
       'A React Native iOS app unifying caffeine logging, intake dashboards, and psychomotor-vigilance testing through optional read-only Apple Health access and local-first storage.',
     facts: [
@@ -134,6 +220,12 @@ export const projects: Project[] = [
       'AsyncStorage and SQLite provide two-layer local-first persistence',
       'Normalized caffeine inputs across automatic and manual logging paths',
     ],
+    focus: {
+      problem: 'Personal health signals need useful feedback without exporting sensitive data by default.',
+      systemDesign: 'React Native and Swift connect a local data model, optional read-only HealthKit access, and SQLite persistence.',
+      evidence: 'Caffeine logging, intake dashboards, and a 60-second vigilance test share normalized local inputs.',
+      outcome: 'A private iOS and iPad experience turns low-level data choices into a clear daily workflow.',
+    },
     metrics: [
       { value: '60 sec', label: 'Vigilance test' },
       { value: 'Read-only', label: 'Apple Health access' },
@@ -148,58 +240,9 @@ export const projects: Project[] = [
       'SQLite',
     ],
     links: [
-      { label: 'Case study', href: '/writing/aurora-private-caffeine-tracking/' },
-      { label: 'Live demo', href: 'https://nmapaye.github.io/aurora' },
+      { label: 'Read AURORA case study', href: '/writing/aurora-private-caffeine-tracking/' },
+      { label: 'View AURORA demo', href: 'https://nmapaye.github.io/aurora' },
     ],
-  },
-  {
-    index: '02',
-    name: 'EmbNode',
-    tagline: 'FreeRTOS telemetry node',
-    period: 'Aug 2025 — Sep 2025',
-    description:
-      'A C++23 FreeRTOS telemetry node for ESP32 and STM32 with deterministic DMA sampling, resilient MQTT/HTTP delivery, and low-power scheduling.',
-    facts: [
-      'Three-stage pipeline for sampling, aggregation, and MQTT/HTTP delivery',
-      'OTA and watchdog recovery for resilient low-power operation',
-      'CRC16-CCITT and telemetry decode validated in a 0.47-second host simulation',
-      '0.15 mA modeled average current with a 15-second sleep schedule',
-    ],
-    stack: [
-      'C++23',
-      'FreeRTOS',
-      'ESP32 / STM32',
-      'MQTT / HTTP',
-      'OTA / Watchdog',
-      'CMake / CTest',
-    ],
-    links: [{ label: 'Repository', href: 'https://github.com/nmapaye/embnode' }],
-  },
-  {
-    index: '03',
-    name: 'GitOps',
-    tagline: 'SLO-driven canary operator',
-    description:
-      'A Go Kubernetes operator that turns service-level signals into automated canary decisions.',
-    facts: [
-      'Prometheus and Gatekeeper policy checks',
-      'Automated rollback in under 30 seconds on p95 regression',
-    ],
-    stack: ['Go', 'Kubernetes', 'Prometheus', 'ArgoCD'],
-    links: [{ label: 'Repository', href: 'https://github.com/nmapaye/gitops' }],
-  },
-  {
-    index: '04',
-    name: 'SysLib',
-    tagline: 'Header-only C++23 concurrency library',
-    description:
-      'Lock-free queues and memory-reclamation experiments measured and verified as a focused systems library.',
-    facts: [
-      '26.9M SPSC operations per second on Apple M-class',
-      'ThreadSanitizer and linearizability checks',
-    ],
-    stack: ['C++23', 'Atomics', 'Lock-free', 'TSan'],
-    links: [{ label: 'Repository', href: 'https://github.com/nmapaye/syslib' }],
   },
 ];
 

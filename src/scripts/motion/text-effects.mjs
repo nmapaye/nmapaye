@@ -76,6 +76,10 @@ export function mountTextEffects(context) {
   let visibilityObserver = null;
   let destroyed = false;
 
+  function setVisualLabel(visual, label) {
+    visual.setAttribute?.('data-label', label);
+  }
+
   function cancelSchedulerIfIdle() {
     if ([...shakes, ...shuffles].every((entry) => entry.startedAt === null)) {
       context.scheduler.cancel(controller);
@@ -94,7 +98,7 @@ export function mountTextEffects(context) {
 
   function cancelShuffle(entry) {
     entry.startedAt = null;
-    entry.visual.textContent = entry.label;
+    setVisualLabel(entry.visual, entry.label);
     entry.element.removeAttribute('data-active');
     context.coordinator.release(entry.owner);
     cancelSchedulerIfIdle();
@@ -155,11 +159,11 @@ export function mountTextEffects(context) {
       for (const entry of shuffles) {
         if (typeof entry.startedAt !== 'number') continue;
         const elapsed = timestamp - entry.startedAt;
-        entry.visual.textContent = shuffleFrame(entry.label, elapsed, {
+        setVisualLabel(entry.visual, shuffleFrame(entry.label, elapsed, {
           seed: 0x4e4d3031,
           triggerCount: entry.triggerCount,
           duration: entry.duration,
-        });
+        }));
         if (elapsed >= entry.duration) cancelShuffle(entry);
       }
       return [...shakes, ...shuffles].some((entry) => entry.startedAt !== null);

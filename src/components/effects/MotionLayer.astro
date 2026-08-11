@@ -1,16 +1,18 @@
 ---
 import { projects } from '../../data/site';
-import ProjectPoster from './ProjectPoster.astro';
 
 interface Props { kinetic?: boolean; }
 const { kinetic = false } = Astro.props;
-const stickers = Array.from({ length: 24 }, (_, index) => projects[index % projects.length]);
+const stickerSources = projects.map((project) => (
+  `/images/project-posters/${project.name.toLowerCase()}.svg`
+));
 ---
 
 <div
   class="motion-root"
   data-motion-root
   data-motion-kinetic={kinetic ? 'true' : 'false'}
+  data-motion-sticker-sources={kinetic ? JSON.stringify(stickerSources) : undefined}
   aria-hidden="true"
 >
   <div class="motion-layer motion-layer--blend" data-motion-blobs>
@@ -27,12 +29,12 @@ const stickers = Array.from({ length: 24 }, (_, index) => projects[index % proje
       <span data-motion-wipe-panel="green"></span>
     </div>
     {kinetic && (
-      <div class="motion-stickers" data-motion-stickers>
-        {stickers.map((project, index) => (
-          <span data-motion-sticker={index}>
-            <ProjectPoster project={project} variant="sticker" />
+      <div class="motion-stickers" data-motion-stickers aria-hidden="true">
+        <template data-motion-sticker-template>
+          <span data-motion-sticker>
+            <img data-motion-sticker-image alt="" width="1200" height="1500" decoding="async" />
           </span>
-        ))}
+        </template>
       </div>
     )}
   </div>

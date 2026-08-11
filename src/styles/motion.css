@@ -78,6 +78,10 @@
   overflow-wrap: inherit;
 }
 
+.glitch-text__visual::before {
+  content: attr(data-label);
+}
+
 .glitch-text[data-motion-enhanced][data-active] > :not([aria-hidden="true"]) {
   color: transparent;
   text-shadow: none;
@@ -185,6 +189,7 @@
 [data-motion-grid-tile] {
   position: absolute;
   width: clamp(11rem, 22vw, 18rem);
+  contain: layout paint style;
   transform: translate3d(var(--tile-x, 0px), var(--tile-y, 0px), 0);
 }
 
@@ -218,6 +223,10 @@
   position: absolute;
   inset: 50% auto auto 0;
   transform: translate3d(var(--motion-marquee-x, 0), -50%, 0);
+}
+
+.kinetic-marquee__track::before {
+  content: attr(data-label) " / " attr(data-label);
 }
 
 .kinetic-marquee:not([data-motion-enhanced]) .kinetic-marquee__track {

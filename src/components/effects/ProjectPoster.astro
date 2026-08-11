@@ -10,9 +10,6 @@ interface Props {
 const { project, variant, layer = 0 } = Astro.props;
 const slug = project.name.toLowerCase();
 const background = `/images/project-posters/${slug}.svg`;
-const detail = project.metrics?.[0]
-  ? `${project.metrics[0].value} / ${project.metrics[0].label}`
-  : project.facts[0];
 ---
 
 <figure
@@ -21,14 +18,5 @@ const detail = project.metrics?.[0]
   data-layer={layer}
   aria-hidden="true"
 >
-  <img src={background} alt="" width="1200" height="1500" loading="lazy" />
-  {variant !== 'stack' && (
-    <figcaption>
-      <span>{project.index}</span>
-      <strong>{project.name}</strong>
-      {project.period && <small>{project.period}</small>}
-      <small>{project.stack.slice(0, 3).join(' / ')}</small>
-      <small>{detail}</small>
-    </figcaption>
-  )}
+  <img src={background} alt="" width="1200" height="1500" loading="lazy" decoding="async" />
 </figure>

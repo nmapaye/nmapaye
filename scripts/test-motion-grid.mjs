@@ -126,6 +126,7 @@ class FakeNode extends FakeEventTarget {
     this.rect = { top: 0, bottom: 300, left: 0, width: 400, height: 300, ...rect };
     this.captures = new Set();
     this.captureLog = [];
+    this.toggleLog = [];
     this.style = {
       values: new Map(),
       setProperty: (key, value) => this.style.values.set(key, value),
@@ -178,11 +179,20 @@ class FakeNode extends FakeEventTarget {
   setAttribute(name, value = '') { this.attrs.set(name, String(value)); }
   getAttribute(name) { return this.attrs.get(name) ?? null; }
   removeAttribute(name) { this.attrs.delete(name); }
-  toggleAttribute(name, enabled) { if (enabled) this.attrs.set(name, ''); else this.attrs.delete(name); }
+  toggleAttribute(name, enabled) {
+    this.toggleLog.push([name, enabled]);
+    if (enabled) this.attrs.set(name, '');
+    else this.attrs.delete(name);
+  }
   set tabIndex(value) { this.attrs.set('tabindex', String(value)); }
 }
 
-function createGridHarness({ observer = true, scheduler: suppliedScheduler } = {}) {
+function createGridHarness({
+  observer = true,
+  resize = false,
+  motionAllowed = true,
+  scheduler: suppliedScheduler,
+} = {}) {
   const document = new FakeEventTarget();
   const browserWindow = new FakeEventTarget();
   browserWindow.innerHeight = 900;
@@ -200,10 +210,11 @@ function createGridHarness({ observer = true, scheduler: suppliedScheduler } = {
     cancel(controller) { requested.delete(controller); },
   };
   let intersectionObserver;
+  let resizeObserver;
   const context = {
     root: { ownerDocument: document },
     signal: new AbortController().signal,
-    policy: { motionAllowed: true, pointerCaptureAllowed: true },
+    policy: { motionAllowed, pointerCaptureAllowed: true },
     scheduler,
     coordinator: createInteractionCoordinator(),
     observerFactory: observer ? (callback) => {
@@ -212,9 +223,18 @@ function createGridHarness({ observer = true, scheduler: suppliedScheduler } = {
       };
       return intersectionObserver;
     } : () => null,
+    resizeObserverFactory: resize ? (callback) => {
+      resizeObserver = {
+        observe() {}, disconnect() {}, emit(entries) { callback(entries); },
+      };
+      return resizeObserver;
+    } : undefined,
   };
   const controller = mountGrid(context);
-  return { browserWindow, context, controller, document, element, intersectionObserver, requested, showcase };
+  return {
+    browserWindow, context, controller, document, element, intersectionObserver,
+    resizeObserver, requested, showcase,
+  };
 }
 
 function drag(harness, pointerId = 4, timestamp = 0) {
@@ -400,4 +420,44 @@ test('non-owned pointers never alter capture or schedule a grid frame', () => {
   harness.element.dispatch('pointerup', { pointerId: 99 });
   assert.equal(harness.element.hasPointerCapture(4), true);
   assert.equal(harness.requested.size, 0);
+});
+
+test('grid uses the latest coalesced pointer sample and avoids redundant seam writes', () => {
+  const harness = createGridHarness({ motionAllowed: false });
+  harness.element.dispatch('pointerdown', {
+    pointerId: 4, pointerType: 'mouse', clientX: 0, clientY: 0, timeStamp: 0,
+  });
+  harness.element.dispatch('pointermove', {
+    pointerId: 4,
+    pointerType: 'mouse',
+    getCoalescedEvents() {
+      return [
+        { clientX: 9, clientY: 0, timeStamp: 10 },
+        { clientX: 20, clientY: 0, timeStamp: 16 },
+      ];
+    },
+  });
+  assert.equal(tileX(harness), 20);
+  assert.equal(harness.element.children[0].toggleLog.length, 0);
+  harness.element.dispatch('pointermove', {
+    pointerId: 4, pointerType: 'mouse', clientX: 28, clientY: 0, timeStamp: 32,
+  });
+  assert.equal(harness.element.children[0].toggleLog.length, 0);
+});
+
+test('grid refreshes wrap dimensions and promotes layers only while active', () => {
+  const harness = createGridHarness({ resize: true });
+  harness.resizeObserver.emit([{
+    target: harness.element,
+    contentRect: { width: 800, height: 320 },
+  }]);
+  assert.equal(
+    harness.element.children[2].style.values.get('--tile-x'),
+    '400px',
+  );
+
+  drag(harness);
+  assert.equal(harness.element.children[0].style.values.get('will-change'), 'transform');
+  harness.element.dispatch('pointercancel', { pointerId: 4 });
+  assert.equal(harness.element.children[0].style.values.has('will-change'), false);
 });

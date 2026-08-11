@@ -56,7 +56,15 @@ function resetParticleNode(node) {
 }
 
 export function mountPointerEffects(context) {
-  const stickerNodes = [...context.root.querySelectorAll('[data-motion-sticker]')];
+  let stickerNodes = [...context.root.querySelectorAll('[data-motion-sticker]')];
+  const stickerContainer = context.root.querySelector?.('[data-motion-stickers]');
+  const stickerTemplate = context.root.querySelector?.('[data-motion-sticker-template]');
+  let stickerSources = [];
+  try {
+    stickerSources = JSON.parse(context.root.getAttribute?.('data-motion-sticker-sources') ?? '[]');
+  } catch {
+    stickerSources = [];
+  }
   const particleNodes = [...context.root.querySelectorAll('[data-motion-particle]')];
   const blobNodes = [...context.root.querySelectorAll('[data-motion-blob]')];
   const zones = [...context.root.ownerDocument.querySelectorAll(
@@ -82,6 +90,25 @@ export function mountPointerEffects(context) {
     particles: [],
     blobs: blobNodes.map(() => ({ x: 0, y: 0, vx: 0, vy: 0 })),
   };
+
+  function ensureStickerNodes() {
+    if (stickerNodes.length || !stickerContainer || !stickerTemplate?.content) return stickerNodes;
+    const fragment = context.root.ownerDocument.createDocumentFragment();
+    for (let index = 0; index < 8; index += 1) {
+      const clone = stickerTemplate.content.firstElementChild?.cloneNode(true);
+      if (!clone) continue;
+      clone.setAttribute('data-motion-sticker', String(index));
+      const image = clone.querySelector?.('[data-motion-sticker-image]');
+      if (image && stickerSources.length) {
+        image.src = stickerSources[index % stickerSources.length];
+        image.loading = 'eager';
+      }
+      fragment.append(clone);
+    }
+    stickerContainer.append(fragment);
+    stickerNodes = [...stickerContainer.querySelectorAll('[data-motion-sticker]')];
+    return stickerNodes;
+  }
 
   const hide = (nodes) => {
     for (const node of nodes) node.removeAttribute('data-active');
@@ -273,6 +300,8 @@ export function mountPointerEffects(context) {
         node.removeAttribute('data-active');
         node.removeAttribute('style');
       }
+      for (const node of stickerNodes) node.remove?.();
+      stickerNodes = [];
     },
   };
 
@@ -367,6 +396,8 @@ export function mountPointerEffects(context) {
           minInterval: 60,
         })
       ) {
+        ensureStickerNodes();
+        if (stickerNodes.length === 0) continue;
         const index = state.stickerCursor % stickerNodes.length;
         state.stickerCursor += 1;
         state.stickers = state.stickers.filter((item) => item.index !== index);

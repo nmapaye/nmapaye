@@ -1,4 +1,4 @@
-import { profile } from './site';
+import { profile, projects } from './site';
 
 const personId = `${profile.canonicalUrl}#person`;
 
@@ -11,6 +11,15 @@ export const identityGraph = {
       url: profile.canonicalUrl,
       name: `${profile.name} — ${profile.title}`,
       description: profile.description,
+      knowsAbout: [
+        'C++23',
+        'Lock-free concurrency',
+        'FreeRTOS',
+        'Embedded telemetry',
+        'Application security',
+        'Kubernetes',
+        'AI evaluation',
+      ],
       mainEntity: { '@id': personId },
     },
     {
@@ -32,6 +41,25 @@ export const identityGraph = {
         sameAs: 'https://www.ucsc.edu/',
       },
       sameAs: profile.sameAs,
+    },
+    {
+      '@type': 'ItemList',
+      '@id': `${profile.canonicalUrl}#projects`,
+      name: 'Selected engineering projects',
+      itemListElement: projects
+        .filter((project) => project.links?.some((link) => link.href.includes('github.com')))
+        .map((project, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
+          item: {
+            '@type': 'SoftwareSourceCode',
+            name: project.name,
+            description: project.description,
+            codeRepository: project.links?.find((link) => link.href.includes('github.com'))?.href,
+            programmingLanguage: project.stack,
+            author: { '@id': personId },
+          },
+        })),
     },
   ],
 };

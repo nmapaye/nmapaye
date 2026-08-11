@@ -27,9 +27,12 @@ const secondary = projects.filter((project) => !project.featured);
         </div>
         <p class="work-feature__tagline">{featured.tagline}</p>
         <p>{featured.description}</p>
-        <ul>
-          {featured.facts.map((fact) => <li>{fact}</li>)}
-        </ul>
+        <dl class="project-focus">
+          <div><dt>Problem</dt><dd>{featured.focus.problem}</dd></div>
+          <div><dt>System design</dt><dd>{featured.focus.systemDesign}</dd></div>
+          <div><dt>Evidence</dt><dd>{featured.focus.evidence}</dd></div>
+          <div><dt>Outcome</dt><dd>{featured.focus.outcome}</dd></div>
+        </dl>
         {featured.links && (
           <div class="work-feature__links">
             {featured.links.map((link) => <a class="btn" data-motion-burst data-motion-shake-related="work-title" href={link.href}>{link.label} ↗</a>)}
@@ -88,6 +91,37 @@ const secondary = projects.filter((project) => !project.featured);
     margin-top: 1rem;
   }
 
+  .project-focus {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    margin-top: 1.5rem;
+    border: var(--rule);
+    background: var(--paper);
+  }
+
+  .project-focus > div {
+    min-width: 0;
+    padding: 1rem;
+    border-right: 2px solid var(--ink);
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .project-focus > div:nth-child(2n) { border-right: 0; }
+  .project-focus > div:nth-last-child(-n + 2) { border-bottom: 0; }
+
+  .project-focus dt {
+    font: 900 0.68rem/1.2 var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .project-focus dd {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+
   .work-feature__links {
     display: flex;
     flex-wrap: wrap;
@@ -138,5 +172,10 @@ const secondary = projects.filter((project) => !project.featured);
       border-right: 0;
       border-bottom: var(--rule);
     }
+
+    .project-focus { grid-template-columns: 1fr; }
+    .project-focus > div,
+    .project-focus > div:nth-child(2n) { border-right: 0; border-bottom: 2px solid var(--ink); }
+    .project-focus > div:last-child { border-bottom: 0; }
   }
 </style>

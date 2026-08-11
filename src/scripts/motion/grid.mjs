@@ -165,6 +165,9 @@ export function mountGrid(context) {
   let previousFrame = null;
   let visible = true;
   let visibilityObserver = null;
+  let resizeObserver = null;
+  let promoted = false;
+  const seamState = Array.from({ length: tileNodes.length }, () => false);
   const listenerAbortController = new AbortController();
   const abortGridListeners = () => listenerAbortController.abort();
   if (context.signal?.aborted) abortGridListeners();
@@ -181,12 +184,38 @@ export function mountGrid(context) {
       );
       node.style.setProperty('--tile-x', `${position.x}px`);
       node.style.setProperty('--tile-y', `${position.y}px`);
-      node.toggleAttribute(
-        'data-motion-tile-seam',
-        Boolean(crossed && context.policy.motionAllowed),
-      );
+      const seam = Boolean(crossed && context.policy.motionAllowed);
+      if (seamState[index] !== seam) {
+        node.toggleAttribute('data-motion-tile-seam', seam);
+        seamState[index] = seam;
+      }
     });
     previousLayout = layout;
+  }
+
+  function setPromotion(nextPromoted) {
+    if (promoted === nextPromoted) return;
+    promoted = nextPromoted;
+    for (const node of tileNodes) {
+      if (promoted) node.style.setProperty('will-change', 'transform');
+      else node.style.removeProperty('will-change');
+    }
+  }
+
+  function refreshDimensions(rect = element.getBoundingClientRect()) {
+    if (rect.width <= 0 || rect.height <= 0) return;
+    if (rect.width === state.width && rect.height === state.height) return;
+    state = {
+      ...state,
+      width: rect.width,
+      height: rect.height,
+      x: wrap(state.x, rect.width),
+      y: wrap(state.y, rect.height),
+    };
+    previousLayout = null;
+    seamState.fill(false);
+    for (const node of tileNodes) node.removeAttribute('data-motion-tile-seam');
+    render();
   }
 
   function releaseCapture() {
@@ -208,6 +237,8 @@ export function mountGrid(context) {
     context.coordinator.release('grid');
     context.coordinator.release('grid-inertia');
     context.scheduler.cancel(controller);
+    setPromotion(false);
+    seamState.fill(false);
     for (const node of tileNodes) node.removeAttribute('data-motion-tile-seam');
     render();
   }
@@ -224,6 +255,7 @@ export function mountGrid(context) {
       previousFrame = timestamp;
       state = advanceGrid(state, elapsed, { damping: 0.92, stopVelocity: 0.08 });
       render();
+      setPromotion(state.dragging || state.inertia.active);
       if (!state.dragging && !state.inertia.active) {
         context.coordinator.release('grid-inertia');
         previousFrame = null;
@@ -242,6 +274,7 @@ export function mountGrid(context) {
       listenerAbortController.abort();
       context.signal?.removeEventListener?.('abort', abortGridListeners);
       visibilityObserver?.disconnect();
+      resizeObserver?.disconnect();
       element.removeAttribute('tabindex');
       element.removeAttribute('role');
       element.removeAttribute('aria-label');
@@ -255,6 +288,7 @@ export function mountGrid(context) {
         node.style.removeProperty('--tile-x');
         node.style.removeProperty('--tile-y');
         node.style.removeProperty('--tile-bounce');
+        node.style.removeProperty('will-change');
       }
     },
   };
@@ -286,14 +320,16 @@ export function mountGrid(context) {
 
   function onPointerMove(event) {
     if (!visible) return;
+    const samples = event.getCoalescedEvents?.() ?? [event];
+    const sample = samples.at(-1) ?? event;
     const before = state.dragging;
     const nextState = reduceGrid(state, {
       type: 'pointermove',
       pointerId: event.pointerId,
       pointerType: event.pointerType,
-      x: event.clientX,
-      y: event.clientY,
-      timestamp: event.timeStamp,
+      x: sample.clientX,
+      y: sample.clientY,
+      timestamp: sample.timeStamp,
     }, { threshold: 8 });
     if (!before && nextState.dragging) {
       const claimed = context.coordinator.claim('grid', 2, () => {
@@ -304,6 +340,7 @@ export function mountGrid(context) {
         showcase?.removeAttribute('data-motion-dragging');
         context.scheduler.cancel(controller);
         previousFrame = null;
+        setPromotion(false);
       });
       if (!claimed) {
         releaseCapture();
@@ -312,10 +349,12 @@ export function mountGrid(context) {
         }, { motionAllowed: false });
         context.scheduler.cancel(controller);
         previousFrame = null;
+        setPromotion(false);
         return;
       }
       state = nextState;
       showcase?.setAttribute('data-motion-dragging', '');
+      setPromotion(true);
     } else {
       state = nextState;
     }
@@ -336,6 +375,7 @@ export function mountGrid(context) {
     context.coordinator.release('grid');
     context.scheduler.cancel(controller);
     previousFrame = null;
+    setPromotion(state.inertia.active);
     if (
       state.inertia.active &&
       context.coordinator.claim('grid-inertia', 0, () => {
@@ -348,6 +388,7 @@ export function mountGrid(context) {
         for (const node of tileNodes) node.removeAttribute('data-motion-tile-seam');
         context.scheduler.cancel(controller);
         previousFrame = null;
+        setPromotion(false);
       })
     ) {
       context.scheduler.request(controller);
@@ -385,8 +426,21 @@ export function mountGrid(context) {
     });
   }
 
+  const resizeObserverFactory = context.resizeObserverFactory ?? ((callback) => {
+    const ResizeObserver = element.ownerDocument.defaultView?.ResizeObserver;
+    return ResizeObserver ? new ResizeObserver(callback) : null;
+  });
+  resizeObserver = resizeObserverFactory?.((entries) => {
+    const entry = entries.find((candidate) => candidate.target === element);
+    if (entry) refreshDimensions(entry.contentRect);
+  });
+  resizeObserver?.observe(element);
+
   element.addEventListener('pointerdown', onPointerDown, { signal: listenerAbortController.signal });
-  element.addEventListener('pointermove', onPointerMove, { signal: listenerAbortController.signal });
+  element.addEventListener('pointermove', onPointerMove, {
+    signal: listenerAbortController.signal,
+    passive: true,
+  });
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
     element.addEventListener(type, onPointerEnd, { signal: listenerAbortController.signal });
   }
