@@ -40,6 +40,15 @@ export const identityGraph = {
         name: 'University of California, Santa Cruz',
         sameAs: 'https://www.ucsc.edu/',
       },
+      knowsAbout: [
+        'C++23',
+        'Lock-free concurrency',
+        'FreeRTOS',
+        'Embedded telemetry',
+        'Application security',
+        'Kubernetes',
+        'AI evaluation',
+      ],
       sameAs: profile.sameAs,
     },
     {
