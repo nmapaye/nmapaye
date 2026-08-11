@@ -65,8 +65,7 @@ export const profile = {
   location: 'Santa Cruz, CA',
   description:
     'Systems engineer building C++23 concurrency libraries, FreeRTOS telemetry, security-conscious software, and dependable product interfaces.',
-  tagline:
-    'I build concurrent runtimes, embedded telemetry, and dependable product surfaces, from atomics and firmware to mobile interfaces.',
+  tagline: 'going from java to Java',
   // Square photo lives at public/profile.jpg. Replace that file (keep the name)
   // to swap your picture, or change this path to a new filename.
   image: 'profile.jpg',
