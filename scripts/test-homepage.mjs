@@ -768,7 +768,7 @@ test('homepage renders the approved issue shell and cover', async () => {
   assert.match(text, /SYSTEMS\s*TO\s*SCREENS/i);
   assert.match(
     text,
-    /going from java to Java/,
+    /Going from java to Java\./,
   );
   assert.match(text, /Explore system builds/);
   assert.match(text, /Operating range/);
