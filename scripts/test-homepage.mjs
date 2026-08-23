@@ -647,7 +647,10 @@ test('final review contracts keep the release gate, resilient masthead, and lega
   assert.doesNotMatch(workflow, /run: npm run test:seo/);
   assert.doesNotMatch(workflow, /build-resume\.py public\/resume\.pdf/);
   assert.match(workflow, /- name: Test public resume\s+run: python scripts\/test-resume\.py/);
-  assert.match(workflow, /uses: actions\/upload-pages-artifact@v3[\s\S]*?path: \.\/dist/);
+  assert.match(
+    workflow,
+    /uses: actions\/upload-pages-artifact@[0-9a-f]{40} # v4[\s\S]*?path: \.\/dist/,
+  );
   assert.match(readme, /public\/resume\.pdf.*file deployed by\s+the site/s);
 
   assert.match(
