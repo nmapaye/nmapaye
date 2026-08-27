@@ -358,7 +358,9 @@ test('about route is conventional, copyable, and free of motion markup', async (
   const about = await readFile(new URL('about/index.html', outputRoot), 'utf8');
   const text = visibleText(about);
 
-  assert.match(text, /Systems engineer who ships usable software\./);
+  assert.match(text, /Bay Area systems engineer who ships usable software\./);
+  assert.match(text, /C\+\+23 lock-free concurrency/);
+  assert.match(text, /FreeRTOS embedded telemetry for ESP32 and STM32/);
   assert.match(text, /Technical focus/);
   assert.match(text, /Selected projects/);
   assert.match(text, /Experience/);
@@ -689,7 +691,7 @@ test('site data carries systems-first copy and structured project evidence', asy
 
   assert.match(
     source,
-    /Systems engineer building C\+\+23 concurrency libraries, FreeRTOS telemetry, security-conscious software, and dependable product interfaces\./,
+    /Bay Area systems and embedded software engineer building C\+\+23 concurrency libraries, FreeRTOS telemetry, application security tools, and dependable product interfaces\./,
   );
   assert.match(source, /label: 'Notes', href: '\/writing\/'/);
   assert.match(source, /name: 'EmbNode'/);
@@ -769,13 +771,12 @@ test('homepage renders the approved issue shell and cover', async () => {
   assert.match(html, /<main id="main-content"[^>]*tabindex="-1"[^>]*>/);
   assert.match(text, /NM\s*\/\s*Issue 01/i);
   assert.match(text, /SYSTEMS\s*TO\s*SCREENS/i);
-  assert.match(
-    text,
-    /Going from java to Java\./,
-  );
-  assert.match(text, /Explore system builds/);
+  assert.match(text, /Bay Area systems and embedded software engineer/);
+  assert.match(text, /Explore embedded systems projects/);
   assert.match(text, /Operating range/);
-  assert.match(text, /C\+\+23 concurrency, FreeRTOS, embedded telemetry/);
+  assert.match(text, /C\+\+23, FreeRTOS, ESP32 and STM32 telemetry/);
+  assert.match(text, /Lock-free concurrency, atomics, Linux, Go, Kubernetes/);
+  assert.match(text, /Application security testing, vulnerability remediation, AI evaluation/);
   assert.match(text, /01\s*\/\s*Work/i);
   assert.match(text, /02\s*\/\s*Experience/i);
   assert.match(text, /03\s*\/\s*Notes/i);
@@ -845,7 +846,7 @@ test('writing output uses the public Notes identity and article navigation', asy
   const indexText = visibleText(index);
   const articleText = visibleText(article);
 
-  assert.match(index, /<title>Notes — Nathaniel Mapaye<\/title>/);
+  assert.match(index, /<title>Systems and Embedded Software Notes \| Nathaniel Mapaye<\/title>/);
   assert.match(indexText, /03\s*\/\s*Notes/i);
   assert.match(indexText, /NOTES\s*FROM\s*THE\s*UNDERGROUND/i);
   assert.match(indexText, /NM\s*\/\s*Issue 01/i);

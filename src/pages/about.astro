@@ -6,18 +6,19 @@ import { education, experience, featuredSkills, links, profile, projects } from 
 ---
 
 <Base
-  title={`${profile.name} | Systems Engineer, C++23 & Embedded Software`}
-  description={profile.description}
+  title={`C++, Embedded & Security Engineering | ${profile.name}`}
+  description={`Experience, projects, and technical skills from ${profile.name}, a Bay Area C++ and embedded software engineer working across FreeRTOS, application security, Kubernetes, and AI evaluation.`}
   motion={false}
 >
   <Nav motion={false} />
   <main id="main-content" class="about container" tabindex="-1">
     <header class="about__intro">
       <p class="eyebrow">About / engineering profile</p>
-      <h1>Systems engineer who ships usable software.</h1>
+      <h1>Bay Area systems engineer who ships usable software.</h1>
       <p>
-        {profile.tagline} My work spans C++23 concurrency, FreeRTOS telemetry,
-        application-security evidence, and reproducible AI evaluation.
+        Based in Santa Cruz, I work across C++23 lock-free concurrency,
+        FreeRTOS embedded telemetry for ESP32 and STM32, application security,
+        Kubernetes, and reproducible AI evaluation.
       </p>
       <p class="about__contact">
         <a href={`mailto:${links.email}`}>{links.email}</a> · <a href={links.github}>GitHub</a> · <a href={links.linkedin}>LinkedIn</a>

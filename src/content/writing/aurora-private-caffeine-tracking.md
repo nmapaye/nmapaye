@@ -1,13 +1,19 @@
 ---
 title: "Building AURORA"
+seoTitle: "Building AURORA, a Private React Native iOS App | Nathaniel Mapaye"
 description: "How AURORA combines manual caffeine logs, optional Apple Health sleep data, a vigilance test, and private on-device storage."
+seoDescription: "How AURORA uses React Native, Swift, HealthKit, MMKV, caffeine logging, sleep data, and a vigilance test in a private iOS app."
 publishedDate: 2026-07-27
 tags:
   - React Native
   - TypeScript
+  - Swift
+  - iOS
   - HealthKit
   - MMKV
-  - Privacy
+  - On-device storage
+  - Caffeine tracking
+  - Vigilance testing
 ---
 
 Building AURORA started with a question from myself :P how can I monitor my caffeine intake effectively?

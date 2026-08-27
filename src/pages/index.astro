@@ -10,9 +10,13 @@ import Notes from '../components/Notes.astro';
 import Contact from '../components/Contact.astro';
 import Footer from '../components/Footer.astro';
 import { identityGraph } from '../data/seo';
+import { profile } from '../data/site';
+
+const title = `${profile.name} | Bay Area Systems & Embedded Software Engineer`;
+const description = profile.description;
 ---
 
-<Base structuredData={identityGraph} kinetic>
+<Base title={title} description={description} structuredData={identityGraph} kinetic>
   <Nav />
   <main id="main-content" tabindex="-1">
     <Hero />

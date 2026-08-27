@@ -69,6 +69,75 @@ function assertSingleMetaValue(html, attribute, name, expected, message) {
   assert.equal(values[0], expected, `${message}: ${name} must match the shared value`);
 }
 
+function decodeHtml(value) {
+  return value
+    .replace(/&#38;|&#x26;|&amp;/gi, '&')
+    .replace(/&#39;|&#x27;|&apos;/gi, "'")
+    .replace(/&#34;|&#x22;|&quot;/gi, '"');
+}
+
+function getTitle(html) {
+  const match = html.match(/<title>([\s\S]*?)<\/title>/i);
+  return match ? decodeHtml(match[1]) : undefined;
+}
+
+function getVisibleText(html) {
+  return decodeHtml(
+    html
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' '),
+  ).replace(/\s+/g, ' ').trim();
+}
+
+test('all public pages publish distinct recruiter-focused metadata without meta keywords', async () => {
+  const pages = [
+    {
+      path: 'index.html',
+      title: 'Nathaniel Mapaye | Bay Area Systems & Embedded Software Engineer',
+      description: 'Bay Area systems and embedded software engineer building C++23 concurrency libraries, FreeRTOS telemetry, application security tools, and AI evaluations.',
+    },
+    {
+      path: 'about/index.html',
+      title: 'C++, Embedded & Security Engineering | Nathaniel Mapaye',
+      description: 'Experience, projects, and technical skills from Nathaniel Mapaye, a Bay Area C++ and embedded software engineer working across FreeRTOS, application security, Kubernetes, and AI evaluation.',
+    },
+    {
+      path: 'writing/index.html',
+      title: 'Systems and Embedded Software Notes | Nathaniel Mapaye',
+      description: 'First-hand engineering case studies by Nathaniel Mapaye on embedded systems, C++ concurrency, React Native iOS apps, application security, and private on-device software.',
+    },
+    {
+      path: 'writing/aurora-private-caffeine-tracking/index.html',
+      title: 'Building AURORA, a Private React Native iOS App | Nathaniel Mapaye',
+      description: 'How AURORA uses React Native, Swift, HealthKit, MMKV, caffeine logging, sleep data, and a vigilance test in a private iOS app.',
+    },
+  ];
+  const titles = new Set();
+  const descriptions = new Set();
+
+  for (const page of pages) {
+    const html = await readOutput(page.path);
+    const title = getTitle(html);
+    const description = decodeHtml(getMetaValues(html, 'name', 'description')[0] ?? '');
+    const message = `metadata mismatch in ${page.path}`;
+
+    assert.equal(title, page.title, `${message}: title`);
+    assert.equal(description, page.description, `${message}: description`);
+    assert.equal(decodeHtml(getMetaValues(html, 'property', 'og:title')[0] ?? ''), page.title, `${message}: Open Graph title`);
+    assert.equal(decodeHtml(getMetaValues(html, 'property', 'og:description')[0] ?? ''), page.description, `${message}: Open Graph description`);
+    assert.equal(decodeHtml(getMetaValues(html, 'name', 'twitter:title')[0] ?? ''), page.title, `${message}: X title`);
+    assert.equal(decodeHtml(getMetaValues(html, 'name', 'twitter:description')[0] ?? ''), page.description, `${message}: X description`);
+    assert.equal(getMetaValues(html, 'name', 'keywords').length, 0, `${message}: meta keywords must be absent`);
+
+    titles.add(title);
+    descriptions.add(description);
+  }
+
+  assert.equal(titles.size, pages.length, 'page titles must be unique');
+  assert.equal(descriptions.size, pages.length, 'page descriptions must be unique');
+});
+
 test('branded social image is copied with the approved PNG dimensions', async () => {
   const image = await readFile(new URL('../dist/og.png', import.meta.url));
 
@@ -130,9 +199,42 @@ test('homepage publishes one canonical professional identity', async () => {
   assert.deepEqual(person.sameAs, approvedProfiles);
   assert.ok(person.knowsAbout.includes('Lock-free concurrency'));
   assert.ok(person.knowsAbout.includes('AI evaluation'));
+  assert.ok(person.knowsAbout.includes('ESP32'));
+  assert.ok(person.knowsAbout.includes('STM32'));
+  assert.ok(person.knowsAbout.includes('Application security'));
+  assert.ok(person.knowsAbout.includes('Kubernetes'));
+  assert.ok(person.knowsAbout.includes('React Native'));
+  assert.ok(person.knowsAbout.includes('Apple HealthKit'));
   assert.equal(projectList.itemListElement.length, 3);
   assert.equal(projectList.itemListElement[0].item['@type'], 'SoftwareSourceCode');
   assert.match(projectList.itemListElement[0].item.codeRepository, /github\.com\/nmapaye\/embnode/);
+  assert.deepEqual(projectList.itemListElement[0].item.keywords, [
+    'C++23 FreeRTOS embedded telemetry node',
+    'C++23',
+    'FreeRTOS',
+    'ESP32 / STM32',
+    'MQTT / HTTP',
+    'OTA / Watchdog',
+    'CMake / CTest',
+  ]);
+
+  const visibleText = getVisibleText(html).toLowerCase();
+
+  for (const topic of person.knowsAbout) {
+    assert.ok(
+      visibleText.includes(topic.toLowerCase()),
+      `structured topic must appear in visible homepage copy: ${topic}`,
+    );
+  }
+
+  for (const entry of projectList.itemListElement) {
+    for (const keyword of entry.item.keywords) {
+      assert.ok(
+        visibleText.includes(keyword.toLowerCase()),
+        `structured project keyword must appear in visible homepage copy: ${keyword}`,
+      );
+    }
+  }
 });
 
 test('all public pages omit private and legacy identity details', async () => {

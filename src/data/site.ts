@@ -64,7 +64,9 @@ export const profile = {
   title: 'Systems Engineer, C++23 & Embedded Software',
   location: 'Santa Cruz, CA',
   description:
-    'Systems engineer building C++23 concurrency libraries, FreeRTOS telemetry, security-conscious software, and dependable product interfaces.',
+    'Bay Area systems and embedded software engineer building C++23 concurrency libraries, FreeRTOS telemetry, application security tools, and AI evaluations.',
+  summary:
+    'Bay Area systems and embedded software engineer building C++23 concurrency libraries, FreeRTOS telemetry, application security tools, and dependable product interfaces.',
   tagline: 'Going from java to Java.',
   // Square photo lives at public/profile.jpg. Replace that file (keep the name)
   // to swap your picture, or change this path to a new filename.
@@ -132,7 +134,7 @@ export const projects: Project[] = [
   {
     index: '01',
     name: 'EmbNode',
-    tagline: 'FreeRTOS telemetry node',
+    tagline: 'C++23 FreeRTOS embedded telemetry node',
     period: 'Aug 2025 — Sep 2025',
     featured: true,
     description:
@@ -167,7 +169,7 @@ export const projects: Project[] = [
   {
     index: '02',
     name: 'SysLib',
-    tagline: 'Header-only C++23 concurrency library',
+    tagline: 'C++23 lock-free concurrency library',
     description:
       'Lock-free queues and memory-reclamation experiments measured and verified as a focused systems library.',
     facts: [
@@ -191,7 +193,7 @@ export const projects: Project[] = [
   {
     index: '03',
     name: 'GitOps',
-    tagline: 'SLO-driven canary operator',
+    tagline: 'Go Kubernetes canary operator',
     description:
       'A Go Kubernetes operator that turns service-level signals into automated canary decisions.',
     facts: [
@@ -210,7 +212,7 @@ export const projects: Project[] = [
   {
     index: '04',
     name: 'AURORA',
-    tagline: 'Private caffeine, sleep, and alertness tracking',
+    tagline: 'Private React Native iOS caffeine and sleep tracker',
     period: 'Aug 2025 — Present',
     description:
       'A React Native iOS app unifying caffeine logging, intake dashboards, and psychomotor-vigilance testing through optional read-only Apple Health access and local-first storage.',

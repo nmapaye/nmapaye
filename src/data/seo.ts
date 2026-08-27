@@ -1,6 +1,21 @@
 import { profile, projects } from './site';
 
 const personId = `${profile.canonicalUrl}#person`;
+const professionalTopics = [
+  'C++23',
+  'Lock-free concurrency',
+  'FreeRTOS',
+  'ESP32',
+  'STM32',
+  'Embedded telemetry',
+  'Application security',
+  'Kubernetes',
+  'Go',
+  'AI evaluation',
+  'React Native',
+  'Swift',
+  'Apple HealthKit',
+];
 
 export const identityGraph = {
   '@context': 'https://schema.org',
@@ -11,15 +26,7 @@ export const identityGraph = {
       url: profile.canonicalUrl,
       name: `${profile.name} — ${profile.title}`,
       description: profile.description,
-      knowsAbout: [
-        'C++23',
-        'Lock-free concurrency',
-        'FreeRTOS',
-        'Embedded telemetry',
-        'Application security',
-        'Kubernetes',
-        'AI evaluation',
-      ],
+      knowsAbout: professionalTopics,
       mainEntity: { '@id': personId },
     },
     {
@@ -40,15 +47,7 @@ export const identityGraph = {
         name: 'University of California, Santa Cruz',
         sameAs: 'https://www.ucsc.edu/',
       },
-      knowsAbout: [
-        'C++23',
-        'Lock-free concurrency',
-        'FreeRTOS',
-        'Embedded telemetry',
-        'Application security',
-        'Kubernetes',
-        'AI evaluation',
-      ],
+      knowsAbout: professionalTopics,
       sameAs: profile.sameAs,
     },
     {
@@ -66,6 +65,7 @@ export const identityGraph = {
             description: project.description,
             codeRepository: project.links?.find((link) => link.href.includes('github.com'))?.href,
             programmingLanguage: project.stack,
+            keywords: [project.tagline, ...project.stack],
             author: { '@id': personId },
           },
         })),

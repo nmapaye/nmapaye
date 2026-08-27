@@ -33,6 +33,9 @@ const secondary = projects.filter((project) => !project.featured);
           <div><dt>Evidence</dt><dd>{featured.focus.evidence}</dd></div>
           <div><dt>Outcome</dt><dd>{featured.focus.outcome}</dd></div>
         </dl>
+        <ul class="work-feature__stack" aria-label={`${featured.name} technologies`}>
+          {featured.stack.map((tech) => <li>{tech}</li>)}
+        </ul>
         {featured.links && (
           <div class="work-feature__links">
             {featured.links.map((link) => <a class="btn" data-motion-burst data-motion-shake-related="work-title" href={link.href}>{link.label} ↗</a>)}
@@ -127,6 +130,22 @@ const secondary = projects.filter((project) => !project.featured);
     flex-wrap: wrap;
     gap: 0.5rem;
     margin-top: 1.5rem;
+  }
+
+  .work-feature__stack {
+    margin-top: 1.5rem;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    list-style: none;
+  }
+
+  .work-feature__stack li {
+    padding: 0.35rem 0.5rem;
+    border: 2px solid var(--ink);
+    font: 800 0.68rem/1 var(--font-mono);
+    text-transform: uppercase;
   }
 
   .work-feature__links .btn {

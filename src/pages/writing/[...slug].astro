@@ -21,10 +21,11 @@ interface Props {
 const { post } = Astro.props;
 const { Content } = await post.render();
 const articleUrl = new URL(`/writing/${post.slug}/`, profile.canonicalUrl).href;
+const description = post.data.seoDescription ?? post.data.description;
 const structuredData = createArticleGraph({
   url: articleUrl,
   headline: post.data.title,
-  description: post.data.description,
+  description,
   publishedDate: post.data.publishedDate,
   updatedDate: post.data.updatedDate,
   tags: post.data.tags,
@@ -37,8 +38,8 @@ const formatDate = (date: Date) =>
 ---
 
 <Base
-  title={`${post.data.title} — ${profile.name}`}
-  description={post.data.description}
+  title={post.data.seoTitle ?? `${post.data.title} | ${profile.name}`}
+  description={description}
   ogType="article"
   structuredData={structuredData}
 >
@@ -49,7 +50,7 @@ const formatDate = (date: Date) =>
       <header class="article__header">
         <p class="eyebrow">{formatDate(post.data.publishedDate)}</p>
         <h1>{post.data.title}</h1>
-        <p class="article__dek">{post.data.description}</p>
+        <p class="article__dek">{description}</p>
         <p class="article__byline">
           By <a href="/" rel="author">{profile.name}</a>
         </p>
