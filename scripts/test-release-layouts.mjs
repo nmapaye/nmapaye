@@ -15,6 +15,7 @@ const requiredStaticFiles = {
   'index.html':
     '<link rel="stylesheet" href="/_astro/site.css"><script type="module" src="/_astro/site.js"></script>',
   'writing/index.html': '<main>Writing</main>',
+  'writing/ai-olympic-offo-technohome-public-archive/index.html': '<main>Public archive</main>',
   'writing/aurora-private-caffeine-tracking/index.html': '<main>AURORA</main>',
   '_astro/site.css': 'body { color: #111; }',
   '_astro/site.js': 'export const ready = true;',

@@ -5,6 +5,7 @@ import { join, relative, resolve, sep } from 'node:path';
 const requiredStaticPaths = [
   'index.html',
   'writing/index.html',
+  'writing/ai-olympic-offo-technohome-public-archive/index.html',
   'writing/aurora-private-caffeine-tracking/index.html',
   'images/project-posters/aurora.svg',
   'favicon.ico',
