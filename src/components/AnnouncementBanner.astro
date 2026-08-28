@@ -1,0 +1,92 @@
+---
+import { announcement } from '../data/site';
+
+const expiry = Date.parse(announcement.expiresAt);
+const isActive = Number.isFinite(expiry) && Date.now() < expiry;
+---
+
+{isActive && (
+  <aside
+    class="announcement"
+    data-announcement
+    data-announcement-expires-at={announcement.expiresAt}
+    aria-label="Shared documents"
+  >
+    <a
+      class="announcement__link"
+      href={announcement.href}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <span class="announcement__label">Limited release</span>
+      <strong>{announcement.title}</strong>
+      <span class="announcement__cta">{announcement.cta} <span aria-hidden="true">↗</span></span>
+    </a>
+  </aside>
+)}
+
+<style>
+  .announcement {
+    border-bottom: var(--rule);
+    background: var(--yellow);
+    color: var(--ink);
+  }
+
+  .announcement[hidden] {
+    display: none;
+  }
+
+  .announcement__link {
+    width: min(100% - 2rem, var(--max-width));
+    min-height: 56px;
+    margin-inline: auto;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: clamp(0.75rem, 2vw, 1.5rem);
+    padding-block: 0.5rem;
+  }
+
+  .announcement__link:hover {
+    text-decoration-thickness: 3px;
+    text-underline-offset: 0.2em;
+  }
+
+  .announcement__label,
+  .announcement__cta {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .announcement strong {
+    font-size: clamp(0.95rem, 2vw, 1.25rem);
+    line-height: 1.15;
+  }
+
+  .announcement__cta {
+    white-space: nowrap;
+  }
+
+  @media (max-width: 639px) {
+    .announcement__link {
+      min-height: 72px;
+      grid-template-columns: 1fr auto;
+      gap: 0.25rem 0.75rem;
+    }
+
+    .announcement__label {
+      grid-column: 1 / -1;
+    }
+
+    .announcement strong {
+      font-size: 0.95rem;
+    }
+
+    .announcement__cta {
+      text-align: right;
+    }
+  }
+</style>

@@ -13,6 +13,13 @@ export interface NavItem {
   href: string; // in-page anchor, e.g. "/#work"
 }
 
+export interface Announcement {
+  title: string;
+  cta: string;
+  href: string;
+  expiresAt: string;
+}
+
 export interface ProjectMetric {
   value: string;
   label: string;
@@ -87,6 +94,13 @@ export const nav: NavItem[] = [
   { label: 'Notes', href: '/writing/' },
   { label: 'Contact', href: '/#contact' },
 ];
+
+export const announcement: Announcement = {
+  title: 'AI untuk Olympic, OFFO Living, dan Technohome',
+  cta: 'View all 4 PDFs',
+  href: 'https://drive.google.com/drive/folders/1SQIFiL1dMYHlsRJAZjIGK5RunMxWDTG7',
+  expiresAt: '2026-09-04T09:27:00Z',
+};
 
 export const featuredSkills = [
   'C++23',

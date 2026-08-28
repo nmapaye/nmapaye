@@ -8,6 +8,7 @@ import { mountGrid } from './grid.mjs';
 import { mountCardStacks } from './card-stack.mjs';
 import { mountTextEffects } from './text-effects.mjs';
 import { mountNavigationWipe } from './navigation-wipe.mjs';
+import { mountAnnouncementExpiry } from './announcement.mjs';
 import { observeMotionPolicy } from './policy.mjs';
 
 const mounts = new WeakMap();
@@ -21,6 +22,7 @@ const kineticFactories = [
 
 function defaultFactories(root) {
   return [
+    mountAnnouncementExpiry,
     mountNavigationWipe,
     ...(root.getAttribute?.('data-motion-kinetic') === 'true'
       ? kineticFactories
