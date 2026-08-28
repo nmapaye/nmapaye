@@ -816,8 +816,9 @@ test('notes and contact close the issue with the approved voice and photos', asy
   assert.match(html, /id="notes"/);
   assert.match(text, /03\s*\/\s*Notes/i);
   assert.match(text, /NOTES\s*FROM\s*THE\s*UNDERGROUND/i);
-  assert.match(text, /Building AURORA/);
-  assert.match(html, /href="\/writing\/aurora-private-caffeine-tracking\/?"/);
+  assert.match(text, /AI materials for Olympic, OFFO Living, and Technohome/);
+  assert.match(html, /href="\/writing\/ai-olympic-offo-technohome-public-archive\/?"/);
+  assert.match(text, /Read the latest note/);
   assert.ok(chapterIndex, 'homepage renders the Chapter Index navigation');
   assert.match(chapterIndex, /href="#notes"/);
   assert.ok(notesImage, 'Notes renders the approved aquarium photograph');

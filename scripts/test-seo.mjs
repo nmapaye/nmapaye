@@ -6,6 +6,8 @@ const canonicalUrl = 'https://nmapaye.com/';
 const outputRoot = new URL('../dist/', import.meta.url);
 const articleUrl =
   'https://nmapaye.com/writing/aurora-private-caffeine-tracking/';
+const archiveArticleUrl =
+  'https://nmapaye.com/writing/ai-olympic-offo-technohome-public-archive/';
 const socialImageUrl = 'https://nmapaye.com/og.png';
 const socialImageWidth = 1731;
 const socialImageHeight = 909;
@@ -106,6 +108,11 @@ test('all public pages publish distinct recruiter-focused metadata without meta 
       path: 'writing/index.html',
       title: 'Systems and Embedded Software Notes | Nathaniel Mapaye',
       description: 'First-hand engineering case studies by Nathaniel Mapaye on embedded systems, C++ concurrency, React Native iOS apps, application security, and private on-device software.',
+    },
+    {
+      path: 'writing/ai-olympic-offo-technohome-public-archive/index.html',
+      title: 'AI Materials for Olympic, OFFO, and Technohome | Nathaniel Mapaye',
+      description: 'Four publicly accessible AI presentation PDFs for Olympic, OFFO Living, and Technohome, preserved in their original form on Google Drive.',
     },
     {
       path: 'writing/aurora-private-caffeine-tracking/index.html',
@@ -285,15 +292,51 @@ test('crawler discovery files point at the canonical domain', async () => {
   assert.match(sitemap, /https:\/\/nmapaye\.com\/sitemap-0\.xml/);
 });
 
-test('writing index publishes the AURORA case study', async () => {
+test('writing index publishes the public archive note and the AURORA case study', async () => {
   const html = await readOutput('writing/index.html');
 
+  assert.match(
+    html,
+    /href="\/writing\/ai-olympic-offo-technohome-public-archive\/?"/,
+    'writing index must link to the public archive note',
+  );
+  assert.match(html, /AI materials for Olympic, OFFO Living, and Technohome/);
   assert.match(
     html,
     /href="\/writing\/aurora-private-caffeine-tracking\/?"/,
     'writing index must link to the AURORA case study',
   );
   assert.match(html, /Building AURORA/);
+});
+
+test('public archive note records the shared PDFs and folder as a BlogPosting', async () => {
+  const html = await readOutput(
+    'writing/ai-olympic-offo-technohome-public-archive/index.html',
+  );
+  const documents = getJsonLdDocuments(html);
+  const article = getGraphNode(documents, 'BlogPosting');
+
+  assert.match(
+    html,
+    /<link rel="canonical" href="https:\/\/nmapaye\.com\/writing\/ai-olympic-offo-technohome-public-archive\/">/,
+  );
+  assert.ok(article, 'public archive note must publish a BlogPosting JSON-LD node');
+  assert.equal(article['@id'], `${archiveArticleUrl}#article`);
+  assert.equal(article.headline, 'AI materials for Olympic, OFFO Living, and Technohome');
+  assert.equal(article.datePublished, '2026-08-28T00:00:00.000Z');
+  assert.equal(article.mainEntityOfPage, archiveArticleUrl);
+  assert.match(
+    html,
+    /href="https:\/\/drive\.google\.com\/drive\/folders\/1SQIFiL1dMYHlsRJAZjIGK5RunMxWDTG7"/,
+  );
+  for (const filename of [
+    'Design.pdf',
+    'AI_untuk_Olympic_OFFO_Technohome.pdf',
+    'AI_untuk_Olympic_OFFO_Technohome_v2.pdf',
+    'AI_untuk_Olympic_OFFO_Technohome_v3.pdf',
+  ]) {
+    assert.match(html, new RegExp(filename.replaceAll('.', '\\.')));
+  }
 });
 
 test('AURORA case study publishes grounded BlogPosting authorship', async () => {
@@ -332,10 +375,14 @@ test('AURORA case study publishes grounded BlogPosting authorship', async () => 
   assert.doesNotMatch(html, /SQLite/);
 });
 
-test('sitemap includes the writing index and AURORA case study', async () => {
+test('sitemap includes both public notes', async () => {
   const sitemap = await readOutput('sitemap-0.xml');
 
   assert.match(sitemap, /https:\/\/nmapaye\.com\/writing\/<\/loc>/);
+  assert.match(
+    sitemap,
+    /https:\/\/nmapaye\.com\/writing\/ai-olympic-offo-technohome-public-archive\/<\/loc>/,
+  );
   assert.match(
     sitemap,
     /https:\/\/nmapaye\.com\/writing\/aurora-private-caffeine-tracking\/<\/loc>/,
