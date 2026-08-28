@@ -1086,7 +1086,7 @@ test('homepage source composes only the final homepage sections', async () => {
   assert.doesNotMatch(source, /components\/(?:About|Education|Skills)\.astro/);
   assert.match(
     source,
-    /<Nav\s*\/>\s*<main id="main-content"[^>]*>\s*<Hero\s*\/>\s*<OperatingRange\s*\/>\s*<ChapterIndex\s*\/>\s*<Projects\s*\/>\s*<Experience\s*\/>\s*<Notes\s*\/>\s*<Contact\s*\/>\s*<\/main>\s*<Footer\s*\/>/,
+    /<Nav\s*\/>\s*<AnnouncementBanner\s*\/>\s*<main id="main-content"[^>]*>\s*<Hero\s*\/>\s*<OperatingRange\s*\/>\s*<ChapterIndex\s*\/>\s*<Projects\s*\/>\s*<Experience\s*\/>\s*<Notes\s*\/>\s*<Contact\s*\/>\s*<\/main>\s*<Footer\s*\/>/,
   );
   assert.match(source, /<main id="main-content"[^>]*tabindex="-1"[^>]*>/);
 
@@ -1099,6 +1099,24 @@ test('homepage source composes only the final homepage sections', async () => {
       ),
     ),
   );
+});
+
+test('homepage publishes the temporary shared-document announcement before main', async () => {
+  const html = await readHomepage();
+  const banner = html.match(/<aside class="announcement"[\s\S]*?<\/aside>/)?.[0] ?? '';
+  const mastheadPosition = html.indexOf('<header class="masthead"');
+  const bannerPosition = html.indexOf('<aside class="announcement"');
+  const mainPosition = html.indexOf('<main id="main-content"');
+
+  assert.ok(mastheadPosition >= 0 && mastheadPosition < bannerPosition);
+  assert.ok(bannerPosition < mainPosition);
+  assert.match(banner, /aria-label="Shared documents"/);
+  assert.match(banner, /data-announcement-expires-at="2026-09-04T09:27:00Z"/);
+  assert.match(banner, /href="https:\/\/drive\.google\.com\/drive\/folders\/1SQIFiL1dMYHlsRJAZjIGK5RunMxWDTG7"/);
+  assert.match(banner, /target="_blank"/);
+  assert.match(banner, /rel="noopener noreferrer"/);
+  assert.match(banner, /AI untuk Olympic, OFFO Living, dan Technohome/);
+  assert.match(banner, /View all 4 PDFs/);
 });
 
 test('homepage retains accessible destinations, a fixed palette, and resilient interaction contracts', async () => {
