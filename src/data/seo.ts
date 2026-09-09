@@ -82,6 +82,24 @@ export interface ArticleIdentity {
   tags: string[];
 }
 
+export const biographyGraph = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'ProfilePage',
+      '@id': `${profile.canonicalUrl}about/#profile`,
+      url: `${profile.canonicalUrl}about/`,
+      name: `${profile.name} | ${profile.title}`,
+      description: profile.biography,
+      mainEntity: { '@id': personId },
+    },
+    {
+      ...identityGraph['@graph'][1],
+      description: profile.biography,
+    },
+  ],
+};
+
 function schemaDateTime(date: Date) {
   return date.toISOString();
 }
@@ -103,7 +121,7 @@ export function createArticleGraph(article: ArticleIdentity) {
           '@type': 'Person',
           '@id': personId,
           name: profile.name,
-          url: profile.canonicalUrl,
+          url: `${profile.canonicalUrl}about/`,
         },
         mainEntityOfPage: article.url,
         keywords: article.tags,

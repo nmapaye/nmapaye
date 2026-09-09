@@ -52,7 +52,7 @@ const formatDate = (date: Date) =>
         <h1>{post.data.title}</h1>
         <p class="article__dek">{description}</p>
         <p class="article__byline">
-          By <a href="/" rel="author">{profile.name}</a>
+          By <a href="/about/" rel="author">{profile.name}</a>
         </p>
         <ul class="chips" aria-label="Topics">
           {post.data.tags.map((tag) => <li class="chip">{tag}</li>)}
@@ -123,5 +123,26 @@ const formatDate = (date: Date) =>
 
   .article__body :global(li + li) {
     margin-top: var(--sp-2);
+  }
+
+  .article__body :global(pre) {
+    max-width: 100%;
+    overflow-x: auto;
+    padding: var(--sp-4);
+    margin-top: var(--sp-5);
+  }
+
+  .article__body :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: var(--sp-5);
+    font-size: 0.9em;
+  }
+
+  .article__body :global(th), .article__body :global(td) {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--ink);
+    text-align: left;
+    vertical-align: top;
   }
 </style>

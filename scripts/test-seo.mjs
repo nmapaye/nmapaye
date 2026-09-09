@@ -11,7 +11,7 @@ const archiveArticleUrl =
 const socialImageUrl = 'https://nmapaye.com/og.png';
 const socialImageWidth = 1731;
 const socialImageHeight = 909;
-const socialImageAlt = 'Nathaniel Mapaye | Systems Engineer, C++23 &#38; Embedded Software portfolio';
+const socialImageAlt = 'Nathaniel Mapaye | Systems and Embedded Engineer portfolio';
 const approvedProfiles = [
   'https://www.linkedin.com/in/nmapaye',
   'https://github.com/nmapaye',
@@ -97,12 +97,12 @@ test('all public pages publish distinct recruiter-focused metadata without meta 
     {
       path: 'index.html',
       title: 'Nathaniel Mapaye | Bay Area Systems & Embedded Software Engineer',
-      description: 'Bay Area systems and embedded software engineer building C++23 concurrency libraries, FreeRTOS telemetry, application security tools, and AI evaluations.',
+      description: 'Bay Area systems and embedded software engineer building C++ concurrency libraries, FreeRTOS telemetry prototypes, application security tools, and AI evaluations.',
     },
     {
       path: 'about/index.html',
-      title: 'C++, Embedded & Security Engineering | Nathaniel Mapaye',
-      description: 'Experience, projects, and technical skills from Nathaniel Mapaye, a Bay Area C++ and embedded software engineer working across FreeRTOS, application security, Kubernetes, and AI evaluation.',
+      title: 'Nathaniel Mapaye | Systems and Embedded Engineer',
+      description: 'Nathaniel Mapaye is a systems and embedded engineer based in Santa Cruz, California. He develops SysLib, a C++20 systems library with an SPSC ring buffer and a blocking MPMC queue, and EmbNode, a C++17 telemetry prototype with FreeRTOS task scaffolding and host-tested packet, power-accounting, and OTA coordination code. He is pursuing a B.S. in Technology & Information Management at the University of California, Santa Cruz, with graduation expected in June 2027.',
     },
     {
       path: 'writing/index.html',
@@ -202,7 +202,7 @@ test('homepage publishes one canonical professional identity', async () => {
   assert.equal(person['@id'], `${canonicalUrl}#person`);
   assert.equal(person.name, 'Nathaniel Mapaye');
   assert.equal(person.alternateName, 'Nathaniel Fransiscus Mapaye');
-  assert.equal(person.jobTitle, 'Systems Engineer, C++23 & Embedded Software');
+  assert.equal(person.jobTitle, 'Systems and Embedded Engineer');
   assert.deepEqual(person.sameAs, approvedProfiles);
   assert.ok(person.knowsAbout.includes('Lock-free concurrency'));
   assert.ok(person.knowsAbout.includes('AI evaluation'));
@@ -216,8 +216,8 @@ test('homepage publishes one canonical professional identity', async () => {
   assert.equal(projectList.itemListElement[0].item['@type'], 'SoftwareSourceCode');
   assert.match(projectList.itemListElement[0].item.codeRepository, /github\.com\/nmapaye\/embnode/);
   assert.deepEqual(projectList.itemListElement[0].item.keywords, [
-    'C++23 FreeRTOS embedded telemetry node',
-    'C++23',
+    'C++17 FreeRTOS telemetry prototype',
+    'C++17',
     'FreeRTOS',
     'ESP32 / STM32',
     'MQTT / HTTP',
@@ -363,7 +363,7 @@ test('AURORA case study publishes grounded BlogPosting authorship', async () => 
     '@type': 'Person',
     '@id': `${canonicalUrl}#person`,
     name: 'Nathaniel Mapaye',
-    url: canonicalUrl,
+    url: `${canonicalUrl}about/`,
   });
   assert.equal(article.mainEntityOfPage, articleUrl);
   assert.match(
@@ -375,7 +375,42 @@ test('AURORA case study publishes grounded BlogPosting authorship', async () => 
   assert.doesNotMatch(html, /SQLite/);
 });
 
-test('sitemap includes both public notes', async () => {
+test('biography and engineering articles share the established person identity', async () => {
+  const about = await readOutput('about/index.html');
+  const documents = getJsonLdDocuments(about);
+  const page = getGraphNode(documents, 'ProfilePage');
+  const person = getGraphNode(documents, 'Person');
+  const homepagePerson = getGraphNode(getJsonLdDocuments(await readOutput('index.html')), 'Person');
+  assert.equal(page.url, `${canonicalUrl}about/`);
+  assert.equal(page['@id'], `${canonicalUrl}about/#profile`);
+  assert.equal(page.mainEntity['@id'], homepagePerson['@id']);
+  assert.equal(person['@id'], homepagePerson['@id']);
+  assert.equal(person.name, homepagePerson.name);
+  assert.equal(person.alternateName, homepagePerson.alternateName);
+  assert.deepEqual(person.sameAs, homepagePerson.sameAs);
+  assert.ok(getVisibleText(about).includes(person.description));
+  assert.ok(getVisibleText(about).includes(person.alternateName));
+  assert.equal(getTitle(about), 'Nathaniel Mapaye | Systems and Embedded Engineer');
+
+  const sitemap = await readOutput('sitemap-0.xml');
+  const index = await readOutput('writing/index.html');
+  for (const slug of ['syslib-concurrency-design', 'embnode-telemetry-design']) {
+    const path = `writing/${slug}/`;
+    const html = await readOutput(`${path}index.html`);
+    const article = getGraphNode(getJsonLdDocuments(html), 'BlogPosting');
+    assert.equal(article.author['@id'], person['@id']);
+    assert.equal(article.author.url, `${canonicalUrl}about/`);
+    assert.equal(article.mainEntityOfPage, `${canonicalUrl}${path}`);
+    assert.ok(html.includes('href="/about/" rel="author"'));
+    assert.ok(html.includes('https://github.com/nmapaye/'));
+    assert.ok(html.includes('/blob/'), 'engineering claims must link to pinned source');
+    assert.ok(sitemap.includes(`${canonicalUrl}${path}`));
+    assert.ok(index.includes(`href="/${path}"`));
+    assert.ok(about.includes(`href="/${path}"`));
+  }
+});
+
+test('sitemap includes both original public notes', async () => {
   const sitemap = await readOutput('sitemap-0.xml');
 
   assert.match(sitemap, /https:\/\/nmapaye\.com\/writing\/<\/loc>/);
