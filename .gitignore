@@ -22,3 +22,6 @@ yarn-error.log*
 
 # isolated feature worktrees
 .worktrees/
+
+# Private campaign drafts and Search Console measurements
+.local/

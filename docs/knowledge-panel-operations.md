@@ -4,6 +4,15 @@ Google decides whether to generate a knowledge panel. The controllable goal is t
 make `https://nmapaye.com` the clearest authoritative source for Nathaniel Mapaye
 and keep every public fact consistent.
 
+## Current state, September 9, 2026
+
+The public canonical domain is hosted on GitHub Pages. The Sites mirror is
+private. Preserve both release workflows; a Sites-only deployment does not
+update the canonical domain. Domain ownership is verified in Search Console,
+and Search generative AI is set to Include. Campaign drafts and account
+measurements are kept locally outside the published site. The launch instructions below are retained
+for recovery, not a request to replace functioning DNS records.
+
 ## Launch order
 
 1. In GitHub account **Settings → Pages**, add `nmapaye.com` as a verified domain.
@@ -48,6 +57,9 @@ After HTTPS is live:
 3. Submit `https://nmapaye.com/sitemap-index.xml`.
 4. Request indexing for:
    - `https://nmapaye.com/`
+   - `https://nmapaye.com/about/`
+   - `https://nmapaye.com/writing/syslib-concurrency-design/`
+   - `https://nmapaye.com/writing/embnode-telemetry-design/`
    - `https://nmapaye.com/writing/aurora-private-caffeine-tracking/`
 5. Confirm Search Console can fetch the homepage, article, `robots.txt`, and
    sitemap.
@@ -62,7 +74,7 @@ Use these exact public facts:
 
 - Name: **Nathaniel Mapaye**
 - Alternate name: **Nathaniel Fransiscus Mapaye**
-- Descriptor: **Software Engineer**
+- Descriptor: **Systems and Embedded Engineer**
 - Website: `https://nmapaye.com`
 - Identity profiles: LinkedIn and GitHub only
 - Location: city level only
@@ -80,7 +92,9 @@ Link the domain, keep no duplicate biography on Carrd, and then unpublish it.
 
 ## Authority cadence
 
-Publish one substantive technical article per quarter. Keep each article grounded
+During the 12-week campaign beginning September 9, 2026, publish the SysLib and
+EmbNode articles and share technical observations every other week. Afterward,
+publish one substantive technical article per quarter. Keep each article grounded
 in demonstrable work and link to public source code when appropriate.
 
 Maintain a simple outreach log with:

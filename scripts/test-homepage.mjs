@@ -358,9 +358,9 @@ test('about route is conventional, copyable, and free of motion markup', async (
   const about = await readFile(new URL('about/index.html', outputRoot), 'utf8');
   const text = visibleText(about);
 
-  assert.match(text, /Bay Area systems engineer who ships usable software\./);
-  assert.match(text, /C\+\+23 lock-free concurrency/);
-  assert.match(text, /FreeRTOS embedded telemetry for ESP32 and STM32/);
+  assert.match(text, /Nathaniel Mapaye is a systems and embedded engineer/);
+  assert.match(text, /C\+\+20 systems library/);
+  assert.match(text, /FreeRTOS task scaffolding/);
   assert.match(text, /Technical focus/);
   assert.match(text, /Selected projects/);
   assert.match(text, /Experience/);
@@ -691,7 +691,7 @@ test('site data carries systems-first copy and structured project evidence', asy
 
   assert.match(
     source,
-    /Bay Area systems and embedded software engineer building C\+\+23 concurrency libraries, FreeRTOS telemetry, application security tools, and dependable product interfaces\./,
+    /Bay Area systems and embedded software engineer building C\+\+ concurrency libraries, FreeRTOS telemetry prototypes, application security tools, and dependable product interfaces\./,
   );
   assert.match(source, /label: 'Notes', href: '\/writing\/'/);
   assert.match(source, /name: 'EmbNode'/);
@@ -709,7 +709,7 @@ test('homepage work navigation targets rendered work and leads with systems evid
   assert.match(homepage, /href="\/#work"/);
   assert.match(homepage, /<section id="work"/);
   assert.match(homepage, /Intermittent networks and low-power constraints make telemetry delivery unreliable/);
-  assert.match(homepage, /CRC and decode checks run in a 0\.47-second host simulation/);
+  assert.match(homepage, /Host contract tests exercise packet validation/);
 });
 
 test('work chapter leads with EmbNode and keeps structured evidence for every project', async () => {
@@ -735,9 +735,9 @@ test('work chapter leads with EmbNode and keeps structured evidence for every pr
 
   assert.match(text, /01\s*\/\s*Work/i);
   assert.match(text, /EmbNode/);
-  assert.match(text, /0\.47 sec/);
-  assert.match(text, /Host simulation/);
-  assert.match(text, /0\.15 mA/);
+  assert.match(text, /CRC16/);
+  assert.match(text, /Contract tests/);
+  assert.match(text, /C\+\+17/);
   assert.match(text, /Problem/);
   assert.match(text, /System design/);
   assert.match(text, /Evidence/);
@@ -752,8 +752,8 @@ test('work chapter leads with EmbNode and keeps structured evidence for every pr
   assert.match(visibleText(gitOps), /Prometheus/);
   assert.match(visibleText(gitOps), /rollback path triggers/);
   assert.match(sysLib, /href="https:\/\/github\.com\/nmapaye\/syslib"/);
-  assert.match(visibleText(sysLib), /26\.9M/);
-  assert.match(visibleText(sysLib), /linearizability/);
+  assert.match(visibleText(sysLib), /SPSC/);
+  assert.match(visibleText(sysLib), /mutex-based MPMC/);
   assert.match(aurora, /href="\/writing\/aurora-private-caffeine-tracking\/?"/);
   assert.doesNotMatch(workChapter, /0 cloud/i);
   assert.doesNotMatch(workChapter, /proof, not prose/i);
@@ -816,8 +816,8 @@ test('notes and contact close the issue with the approved voice and photos', asy
   assert.match(html, /id="notes"/);
   assert.match(text, /03\s*\/\s*Notes/i);
   assert.match(text, /NOTES\s*FROM\s*THE\s*UNDERGROUND/i);
-  assert.match(text, /AI materials for Olympic, OFFO Living, and Technohome/);
-  assert.match(html, /href="\/writing\/ai-olympic-offo-technohome-public-archive\/?"/);
+  assert.match(text, /EmbNode: testing telemetry before connecting hardware/);
+  assert.match(html, /href="\/writing\/embnode-telemetry-design\/?"/);
   assert.match(text, /Read the latest note/);
   assert.ok(chapterIndex, 'homepage renders the Chapter Index navigation');
   assert.match(chapterIndex, /href="#notes"/);
@@ -856,7 +856,7 @@ test('writing output uses the public Notes identity and article navigation', asy
   assert.match(article, /<main id="main-content"[^>]*tabindex="-1"[^>]*>/);
   assert.match(
     article,
-    /By\s*<a href="\/" rel="author"[^>]*>Nathaniel Mapaye<\/a>/,
+    /By\s*<a href="\/about\/" rel="author"[^>]*>Nathaniel Mapaye<\/a>/,
   );
 });
 
@@ -1102,22 +1102,17 @@ test('homepage source composes only the final homepage sections', async () => {
   );
 });
 
-test('homepage publishes the temporary shared-document announcement before main', async () => {
+test('homepage removes the expired shared-document announcement', async () => {
   const html = await readHomepage();
   const banner = html.match(/<aside class="announcement"[\s\S]*?<\/aside>/)?.[0] ?? '';
   const mastheadPosition = html.indexOf('<header class="masthead"');
   const bannerPosition = html.indexOf('<aside class="announcement"');
   const mainPosition = html.indexOf('<main id="main-content"');
 
-  assert.ok(mastheadPosition >= 0 && mastheadPosition < bannerPosition);
-  assert.ok(bannerPosition < mainPosition);
-  assert.match(banner, /aria-label="Shared documents"/);
-  assert.match(banner, /data-announcement-expires-at="2026-09-04T09:27:00Z"/);
-  assert.match(banner, /href="https:\/\/drive\.google\.com\/drive\/folders\/1SQIFiL1dMYHlsRJAZjIGK5RunMxWDTG7"/);
-  assert.match(banner, /target="_blank"/);
-  assert.match(banner, /rel="noopener noreferrer"/);
-  assert.match(banner, /AI untuk Olympic, OFFO Living, dan Technohome/);
-  assert.match(banner, /View all 4 PDFs/);
+  assert.ok(mastheadPosition >= 0 && mastheadPosition < mainPosition);
+  assert.equal(bannerPosition, -1);
+  assert.equal(banner, '');
+
 });
 
 test('homepage retains accessible destinations, a fixed palette, and resilient interaction contracts', async () => {
