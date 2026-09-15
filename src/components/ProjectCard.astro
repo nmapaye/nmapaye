@@ -32,7 +32,7 @@ const { project } = Astro.props;
   {project.links && (
     <div class="project-card__links">
       {project.links.map((link) => (
-        <a data-motion-burst data-motion-shake-related="work-title" href={link.href} rel={link.href.startsWith('http') ? 'noopener' : undefined}>
+        <a class="btn" data-motion-burst data-motion-shake-related="work-title" href={link.href} rel={link.href.startsWith('http') ? 'noopener' : undefined}>
           {link.label} ↗
         </a>
       ))}
@@ -96,7 +96,8 @@ const { project } = Astro.props;
 
   .project-card__stack li {
     padding: 0.35rem 0.5rem;
-    border: 2px solid var(--ink);
+    border: var(--component-border);
+    border-radius: var(--component-radius);
     font: 800 0.68rem/1 var(--font-mono);
     text-transform: uppercase;
   }
@@ -104,6 +105,8 @@ const { project } = Astro.props;
   .project-card__links {
     display: flex;
     flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0 4px 4px 0;
   }
 
   .project-card__links a {

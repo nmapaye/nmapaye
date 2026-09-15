@@ -64,6 +64,14 @@ a:hover {
   text-decoration: underline;
 }
 
+.photo-frame {
+  padding: 0.75rem;
+  border: var(--component-border);
+  border-radius: var(--component-radius);
+  background: var(--paper);
+  box-shadow: var(--component-shadow);
+}
+
 img {
   max-width: 100%;
   display: block;
@@ -102,19 +110,30 @@ ul {
 .btn {
   min-height: 44px;
   padding: 0.75rem 1rem;
-  border: var(--rule);
-  border-radius: 0;
+  border: var(--component-border);
+  border-radius: var(--component-radius);
+  box-shadow: var(--component-shadow);
   background: var(--white);
   color: var(--ink);
   font-weight: 900;
   text-transform: uppercase;
-  transition: transform 120ms ease, background-color 120ms ease;
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
 }
 
 .btn:hover {
-  transform: translate(-3px, -3px);
-  box-shadow: 3px 3px 0 var(--ink);
   text-decoration: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover {
+    transform: translate(2px, 2px);
+    box-shadow: var(--component-shadow-pressed);
+  }
+}
+
+.btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: var(--component-shadow-pressed);
 }
 
 .btn--primary {
@@ -147,8 +166,8 @@ ul {
   background: var(--chip-bg);
   color: var(--chip-text);
   padding: var(--sp-1) var(--sp-3);
-  border: 1px solid var(--ink);
-  border-radius: 0;
+  border: var(--component-border);
+  border-radius: var(--component-radius);
   white-space: nowrap;
 }
 
@@ -169,5 +188,13 @@ ul {
   .btn:hover {
     transform: none;
     box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce), (pointer: coarse) {
+  .btn:hover,
+  .btn:active {
+    transform: none;
+    box-shadow: var(--component-shadow);
   }
 }

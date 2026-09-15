@@ -205,7 +205,7 @@ test('motion markup defers decorative stickers and keeps canonical poster assets
     posterPaths.map((path) => assert.doesNotReject(access(new URL(path, repoRoot)))),
   );
   assert.match(html, /data-motion-root/);
-  assert.equal((html.match(/data-motion-blob=/g) ?? []).length, 2);
+  assert.equal((html.match(/data-motion-blob=/g) ?? []).length, 0);
   assert.equal((html.match(/data-motion-sticker(?:\s|=)/g) ?? []).length, 0);
   assert.equal((html.match(/data-motion-sticker-template/g) ?? []).length, 1);
   assert.match(html, /data-motion-sticker-sources=/);
@@ -215,29 +215,14 @@ test('motion markup defers decorative stickers and keeps canonical poster assets
   assert.doesNotMatch(html, /data-motion-grid[^>]*tabindex="0"/);
 });
 
-test('difference blobs blend at their own page-layer boundary', async () => {
+test('cursor blobs and blend layers stay absent while the original effects remain', async () => {
   const [html, builtCss] = await Promise.all([readHomepage(), readBuiltCss()]);
-  const root = findExactCssRule(builtCss, /^\.motion-root$/);
-  const blendLayer = findExactCssRule(builtCss, /^\.motion-layer--blend$/);
-  const blob = collectCssRuleBlocks(builtCss).find(({ prelude, block }) => (
-    splitSimpleSelectorList(prelude).includes('[data-motion-blob]')
-      && /width\s*:/.test(block)
-  ))?.block ?? null;
-
-  assert.match(html, /class="motion-root"[^>]*data-motion-root/);
-  assert.equal((html.match(/class="motion-layer motion-layer--blend"/g) ?? []).length, 1);
-  assert.equal((html.match(/class="motion-layer motion-layer--effects"/g) ?? []).length, 1);
-  assert.match(root ?? '', /display:\s*contents/);
-  assert.match(blendLayer ?? '', /mix-blend-mode:\s*difference/);
-  assert.doesNotMatch(blob ?? '', /mix-blend-mode/);
-  assert.match(blob ?? '', /width:\s*clamp\(7\.5rem,\s*18vw,\s*16rem\)/);
-  const translateIndex = blob?.indexOf('translate3d(') ?? -1;
-  const centerIndex = blob?.indexOf('translate(-50%,-50%)') ?? -1;
-  const rotateIndex = blob?.indexOf('rotate(') ?? -1;
-  assert.ok(
-    translateIndex >= 0 && translateIndex < centerIndex && centerIndex < rotateIndex,
-    'blob transforms translate the spring point, center the box, then rotate it',
-  );
+  assert.doesNotMatch(html, /data-motion-blobs?|motion-layer--blend/);
+  assert.doesNotMatch(builtCss, /mix-blend-mode|--blob-|data-motion-blob/);
+  assert.match(html, /class="motion-layer motion-layer--effects"/);
+  assert.match(html, /data-motion-sticker-template/);
+  assert.match(html, /data-motion-particles/);
+  assert.match(html, /data-motion-wipe/);
 });
 
 test('built motion delivery keeps one shared module, stable posters, and writing fallbacks', async () => {
@@ -257,7 +242,7 @@ test('built motion delivery keeps one shared module, stable posters, and writing
   );
   const modulePath = moduleTag.match(/\bsrc="([^"]+)"/)?.[1];
   assert.ok(modulePath, 'homepage motion module has a source URL');
-  assert.equal((html.match(/data-motion-blob=/g) ?? []).length, 2);
+  assert.equal((html.match(/data-motion-blob=/g) ?? []).length, 0);
   assert.equal((html.match(/data-motion-sticker=/g) ?? []).length, 0);
   assert.equal((html.match(/data-motion-sticker-template/g) ?? []).length, 1);
   assert.equal((html.match(/data-motion-particle=/g) ?? []).length, 8);
@@ -321,7 +306,7 @@ test('built navigation wipe keeps the exact bounded accessibility sequence', asy
   );
   assert.match(
     css,
-    /@media\s*\(forced-colors:\s*active\),\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\[data-motion-blobs\],\[data-motion-stickers\],\[data-motion-particles\],\[data-motion-wipe\]\{display:none\}/,
+    /@media\s*\(forced-colors:\s*active\),\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\[data-motion-stickers\],\[data-motion-particles\],\[data-motion-wipe\]\{display:none\}/,
   );
 });
 
@@ -867,11 +852,11 @@ test('Notes and Contact keep their mobile crop, title, and contrast contracts', 
 
   assert.match(
     contact,
-    /\.contact__portrait\s*\{[\s\S]*?aspect-ratio:\s*4\s*\/\s*5;[\s\S]*?overflow:\s*hidden;/,
+    /class="photo-frame contact__portrait"/,
   );
   assert.match(
     contact,
-    /\.contact__portrait\s*:global\(img\)\s*\{[\s\S]*?width:\s*100%;[\s\S]*?height:\s*100%;[\s\S]*?object-fit:\s*cover;/,
+    /\.contact__portrait\s*:global\(img\)\s*\{[\s\S]*?width:\s*100%;[\s\S]*?height:\s*auto;[\s\S]*?aspect-ratio:\s*4\s*\/\s*5;[\s\S]*?object-fit:\s*cover;/,
   );
   assert.match(
     notes,
@@ -963,14 +948,14 @@ test('experience chapter emphasizes systems, security, and product', async () =>
     /alt="Nathaniel Mapaye playing table tennis outdoors"/,
   );
   assert.match(actionImage, /loading="lazy"/);
-  assert.match(actionImage, /sizes="\(max-width: 959px\) 100vw, 34vw"/);
+  assert.match(actionImage, /sizes="320px"/);
   assert.match(
     actionImage,
     /src="\/_astro\/experience-table-tennis\.[^"]+\.webp"/,
   );
   assert.match(
     actionImage,
-    /srcset="[^"]+\.webp 480w, [^"]+\.webp 720w, [^"]+\.webp 960w"/,
+    /srcset="[^"]+\.webp 320w, [^"]+\.webp 640w, [^"]+\.webp 960w"/,
   );
 
   assert.equal(timelineEntries.length, 6, 'Experience renders six timeline entries');
@@ -1023,11 +1008,7 @@ test('built experience chapter uses the approved compact mobile layout', async (
   );
   assert.match(
     mobileCss,
-    /\.experience__credentials\[[^\]]+\]\s+li\[[^\]]+\]\s*\{[^}]*border:\s*2px\s+solid\s+var\(--ink\)/,
-  );
-  assert.match(
-    mobileCss,
-    /\.experience__credentials\[[^\]]+\]\s+img\[[^\]]+\]\s*\{\s*aspect-ratio:\s*3\s*\/\s*2\s*\}/,
+    /\.experience__credentials\[[^\]]+\]\s+li\[[^\]]+\]\s*\{[^}]*border:\s*var\(--component-border\)[^}]*border-radius:\s*var\(--component-radius\)/,
   );
   assert.match(
     mobileCss,

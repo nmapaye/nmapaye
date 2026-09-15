@@ -66,7 +66,7 @@ test('source wipe markup and styles define one exact accessible three-panel sequ
   );
   assert.match(
     accessibility ?? '',
-    /\[data-motion-blobs\],\s*\[data-motion-stickers\],\s*\[data-motion-particles\],\s*\[data-motion-wipe\]\s*\{\s*display:\s*none;/,
+    /\[data-motion-stickers\],\s*\[data-motion-particles\],\s*\[data-motion-wipe\]\s*\{\s*display:\s*none;/,
   );
   assert.match(navMarkup, /<details\s+class="masthead__mobile"\s+data-mobile-menu>/);
 });

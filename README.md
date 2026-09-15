@@ -32,6 +32,10 @@ nmapaye@ucsc.edu • [LinkedIn](https://www.linkedin.com/in/nmapaye) • [Websit
 
 ## Site development
 
+Visual changes follow the [selective styling standard](docs/design-system.md) and
+[agent instructions](AGENTS.md). Preserve the original layout, typography, palette,
+and effects. Apply the reference to component details; keep cursor blobs removed.
+
 ```sh
 npm ci
 python3 -m pip install -r requirements-test.txt
