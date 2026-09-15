@@ -11,18 +11,6 @@ export function shouldSpawnSticker(previous, next, limits) {
   );
 }
 
-export function advanceBlob(state, target, elapsed, config) {
-  const scale = Math.min(elapsed, 50);
-  let vx = (state.vx + (target.x - state.x) * config.stiffness * scale) * config.damping;
-  let vy = (state.vy + (target.y - state.y) * config.stiffness * scale) * config.damping;
-  const speed = Math.hypot(vx, vy);
-  if (speed > config.maxSpeed) {
-    vx *= config.maxSpeed / speed;
-    vy *= config.maxSpeed / speed;
-  }
-  return { x: state.x + vx, y: state.y + vy, vx, vy };
-}
-
 function seeded(seed) {
   let state = seed >>> 0;
   return () => {
@@ -66,7 +54,6 @@ export function mountPointerEffects(context) {
     stickerSources = [];
   }
   const particleNodes = [...context.root.querySelectorAll('[data-motion-particle]')];
-  const blobNodes = [...context.root.querySelectorAll('[data-motion-blob]')];
   const zones = [...context.root.ownerDocument.querySelectorAll(
     '[data-motion-hero], [data-motion-showcase]',
   )];
@@ -77,10 +64,7 @@ export function mountPointerEffects(context) {
   if (context.signal?.aborted) abortPointerListeners();
   else context.signal?.addEventListener('abort', abortPointerListeners, { once: true });
   const state = {
-    pointer: null,
     pointerZone: null,
-    previousFrame: null,
-    running: false,
     lastSticker: null,
     stickerZone: null,
     stickerCursor: 0,
@@ -88,7 +72,6 @@ export function mountPointerEffects(context) {
     burstOwner: null,
     stickers: [],
     particles: [],
-    blobs: blobNodes.map(() => ({ x: 0, y: 0, vx: 0, vy: 0 })),
   };
 
   function ensureStickerNodes() {
@@ -110,15 +93,10 @@ export function mountPointerEffects(context) {
     return stickerNodes;
   }
 
-  const hide = (nodes) => {
-    for (const node of nodes) node.removeAttribute('data-active');
-  };
   const clearPointer = () => {
-    state.pointer = null;
     state.pointerZone = null;
     state.lastSticker = null;
     state.stickerZone = null;
-    hide(blobNodes);
   };
   const clearStickers = () => {
     state.stickers = [];
@@ -134,14 +112,10 @@ export function mountPointerEffects(context) {
     if (owner) context.coordinator.release(owner);
   };
   const stopIfIdle = () => {
-    if (state.pointer || state.stickers.length || state.particles.length) return;
-    state.running = false;
-    state.previousFrame = null;
+    if (state.stickers.length || state.particles.length) return;
     context.scheduler.cancel(controller);
   };
   const request = () => {
-    if (!state.running) state.previousFrame = context.scheduler.now(context.clock());
-    state.running = true;
     context.scheduler.request(controller);
   };
   const beginStickerExit = () => {
@@ -167,8 +141,6 @@ export function mountPointerEffects(context) {
 
   const controller = {
     update(timestamp) {
-      const elapsed = state.previousFrame === null ? 0 : timestamp - state.previousFrame;
-      state.previousFrame = timestamp;
       if (context.coordinator.owner === 'grid') {
         clearPointer();
         clearStickers();
@@ -182,42 +154,6 @@ export function mountPointerEffects(context) {
         .filter((item) => timestamp - item.startedAt < item.duration);
       if (state.particles.length === 0 && state.burstOwner) cancelBurst();
 
-      let blobMoving = false;
-      if (
-        state.pointer &&
-        context.policy.finePointerEffects &&
-        context.coordinator.owner !== 'grid'
-      ) {
-        state.blobs = state.blobs.map((blob, index) =>
-          advanceBlob(blob, state.pointer, elapsed, {
-            stiffness: index === 0 ? 0.014 : 0.009,
-            damping: index === 0 ? 0.78 : 0.82,
-            maxSpeed: 32,
-          }),
-        );
-        blobMoving = state.blobs.some((blob) =>
-          Math.hypot(blob.vx, blob.vy) > 0.05 ||
-          Math.hypot(blob.x - state.pointer.x, blob.y - state.pointer.y) > 0.5,
-        );
-      }
-
-      blobNodes.forEach((node, index) => {
-        const blob = state.blobs[index];
-        node.style.setProperty('--blob-x', `${blob.x}px`);
-        node.style.setProperty('--blob-y', `${blob.y}px`);
-        const speed = Math.hypot(blob.vx, blob.vy);
-        const stretch = Math.min(0.18, speed / 160);
-        node.style.setProperty('--blob-scale-x', String(1 + stretch));
-        node.style.setProperty('--blob-scale-y', String(1 - stretch * 0.5));
-        node.style.setProperty(
-          '--blob-rotate',
-          `${Math.atan2(blob.vy, blob.vx) * (180 / Math.PI)}deg`,
-        );
-        node.toggleAttribute(
-          'data-active',
-          Boolean(state.pointer && context.policy.finePointerEffects),
-        );
-      });
       stickerNodes.forEach((node, index) => {
         const item = state.stickers.find((entry) => entry.index === index);
         if (!item) {
@@ -265,10 +201,8 @@ export function mountPointerEffects(context) {
         );
       });
       const needsAnotherFrame = Boolean(
-        blobMoving || state.stickers.length || state.particles.length,
+        state.stickers.length || state.particles.length,
       );
-      state.running = needsAnotherFrame;
-      if (!needsAnotherFrame) state.previousFrame = null;
       return needsAnotherFrame;
     },
     setPolicy(policy) {
@@ -280,8 +214,6 @@ export function mountPointerEffects(context) {
         clearPointer();
         clearStickers();
         cancelBurst();
-        state.running = false;
-        state.previousFrame = null;
         context.scheduler.cancel(controller);
       }
       if (!policy.finePointerEffects && state.particles.length === 0) stopIfIdle();
@@ -292,11 +224,9 @@ export function mountPointerEffects(context) {
       clearPointer();
       clearStickers();
       cancelBurst();
-      state.running = false;
-      state.previousFrame = null;
       context.scheduler.cancel(controller);
       observer?.disconnect();
-      for (const node of [...blobNodes, ...stickerNodes, ...particleNodes]) {
+      for (const node of [...stickerNodes, ...particleNodes]) {
         node.removeAttribute('data-active');
         node.removeAttribute('style');
       }
@@ -373,7 +303,6 @@ export function mountPointerEffects(context) {
       return;
     }
     for (const sample of samples) {
-      state.pointer = { x: sample.clientX, y: sample.clientY };
       state.pointerZone = zone;
       if (!zone.matches('[data-motion-showcase]')) {
         beginStickerExit();
@@ -411,7 +340,8 @@ export function mountPointerEffects(context) {
         state.lastSticker = nextSticker;
       }
     }
-    request();
+    if (state.stickers.length || state.particles.length) request();
+    else stopIfIdle();
   }
 
   function handlePointerOut(event) {

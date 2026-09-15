@@ -21,6 +21,12 @@
   --max-width: 78rem;
   --nav-height: 4.25rem;
 
+  /* Selective component details; preserve the editorial layout and type. */
+  --component-radius: 5px;
+  --component-border: 2px solid var(--ink);
+  --component-shadow: 4px 4px 0 var(--ink);
+  --component-shadow-pressed: 2px 2px 0 var(--ink);
+
   /* Existing component scale, retained while later chapters are redesigned. */
   --fs-xs: 0.8125rem;
   --fs-sm: 0.9375rem;

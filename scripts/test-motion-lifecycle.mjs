@@ -891,7 +891,7 @@ test('mounted motion clients clear exact transient state before navigation activ
   const harness = createRealControllerHarness();
   harness.seedActivity();
   assert.equal(harness.schedulerHarness.scheduler.snapshot().active, 3);
-  assert.equal(harness.blob.hasAttribute('data-active'), true);
+  assert.equal(harness.blob.hasAttribute('data-active'), false);
   assert.equal(harness.sticker.hasAttribute('data-active'), true);
   assert.notEqual(harness.marquee.style.getPropertyValue('--motion-marquee-x'), '');
   assert.equal(harness.stack.hasAttribute('data-expanded'), true);

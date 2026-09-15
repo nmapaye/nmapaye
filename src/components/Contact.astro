@@ -18,7 +18,7 @@ const resume = `${base}/${profile.resume}`.replace(/\/+/g, '/');
       <a class="btn" data-motion-burst data-motion-shake-related="contact-title" href={links.github} rel="noopener">GitHub</a>
     </div>
   </div>
-  <div class="contact__portrait">
+  <div class="photo-frame contact__portrait">
     <Image
       src={contactPhoto}
       alt="Portrait of Nathaniel Mapaye"
@@ -60,16 +60,13 @@ const resume = `${base}/${profile.resume}`.replace(/\/+/g, '/');
   }
 
   .contact__portrait {
-    border: var(--rule);
-    background: var(--paper);
-    aspect-ratio: 4 / 5;
-    overflow: hidden;
     transform: rotate(2deg);
   }
 
   .contact__portrait :global(img) {
     width: 100%;
-    height: 100%;
+    height: auto;
+    aspect-ratio: 4 / 5;
     object-fit: cover;
   }
 

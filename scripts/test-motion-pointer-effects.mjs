@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  advanceBlob,
   createBurst,
   mountPointerEffects,
   shouldSpawnSticker,
@@ -264,16 +263,14 @@ test('expired bursts remove renderer-owned particle styles and glyphs', () => {
   assert.equal(harness.particles.every((node) => node.textContent === ''), true);
 });
 
-test('blob springs approach the target without overshooting the configured bound', () => {
-  const next = advanceBlob(
-    { x: 0, y: 0, vx: 0, vy: 0 },
-    { x: 100, y: 50 },
-    16,
-    { stiffness: 0.014, damping: 0.78, maxSpeed: 32 },
-  );
-  assert.ok(next.x > 0 && next.x < 100);
-  assert.ok(next.y > 0 && next.y < 50);
-  assert.ok(Math.hypot(next.vx, next.vy) <= 32);
+test('hero pointer movement schedules no blob rendering work', () => {
+  const harness = createPointerHarness();
+  for (const x of [20, 80, 200]) {
+    harness.dispatch('pointermove', { target: harness.hero, clientX: x, clientY: 40, timeStamp: x });
+  }
+  assert.equal(harness.requested.size, 0);
+  assert.equal(harness.controller.update(200), false);
+  assert.equal(harness.blobs.some((node) => node.attrs.has('data-active')), false);
 });
 
 test('first Work pointer sample resets the sticker baseline after leaving Hero', () => {
@@ -316,7 +313,7 @@ test('offscreen motion zones ignore pointer movement without scheduling a frame'
   assert.equal(harness.blobs.some((node) => node.attrs.has('data-active')), false);
 });
 
-test('an active offscreen zone hides blobs and short-exits its sticker trail', () => {
+test('an active offscreen zone short-exits its sticker trail without any cursor blobs', () => {
   const harness = createPointerHarness();
   harness.dispatch('pointermove', {
     target: harness.showcase,
@@ -332,7 +329,7 @@ test('an active offscreen zone hides blobs and short-exits its sticker trail', (
   });
   harness.controller.update(16);
   assert.equal(harness.requested.size, 1);
-  assert.equal(harness.blobs.some((node) => node.attrs.has('data-active')), true);
+  assert.equal(harness.blobs.some((node) => node.attrs.has('data-active')), false);
   assert.equal(harness.stickers.some((node) => node.attrs.has('data-active')), true);
 
   harness.observer.emit([{ target: harness.showcase, isIntersecting: false }]);
@@ -477,7 +474,7 @@ test('fallback scroll clears active pointer effects when their zone leaves the v
   const harness = createPointerHarness({ withObserver: false });
   activateShowcasePointerEffects(harness);
   assert.equal(harness.requested.size, 1);
-  assert.equal(harness.blobs.some((node) => node.attrs.has('data-active')), true);
+  assert.equal(harness.blobs.some((node) => node.attrs.has('data-active')), false);
   assert.equal(harness.stickers.some((node) => node.attrs.has('data-active')), true);
 
   harness.showcase.rect = { left: 0, top: 800, width: 100, height: 100 };
@@ -621,7 +618,7 @@ test('a new sticker receives its full lifetime while the controller is active', 
     clientY: 0,
     timeStamp: 0,
   });
-  frames.shift()(0);
+  assert.equal(frames.length, 0, 'the baseline sample has no blob frame');
 
   clock = 60;
   harness.dispatch('pointermove', {

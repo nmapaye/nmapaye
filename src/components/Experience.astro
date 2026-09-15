@@ -36,15 +36,19 @@ import { education, experience, featuredSkills } from '../data/site';
     </ol>
 
     <aside class="experience__credentials">
-      <Image
-        src={actionPhoto}
-        alt="Nathaniel Mapaye playing table tennis outdoors"
-        widths={[480, 720, 960]}
-        sizes="(max-width: 959px) 100vw, 34vw"
-        format="webp"
-        quality={80}
-        loading="lazy"
-      />
+      <figure class="experience__photo">
+        <div class="photo-frame experience__photo-frame">
+          <Image
+            src={actionPhoto}
+            alt="Nathaniel Mapaye playing table tennis outdoors"
+            widths={[320, 640, 960]}
+            sizes="320px"
+            format="webp"
+            quality={80}
+            loading="lazy"
+          />
+        </div>
+      </figure>
       <div>
         <p class="chapter__label">Education</p>
         <h3>{education[0].school}</h3>
@@ -144,10 +148,21 @@ import { education, experience, featuredSkills } from '../data/site';
     border-bottom: var(--rule);
   }
 
+  .experience__photo {
+    padding: 1.5rem;
+  }
+
+  .experience__photo-frame {
+    width: fit-content;
+    max-width: 100%;
+    margin-inline: auto;
+  }
+
   .experience__credentials img {
     width: 100%;
-    aspect-ratio: 4 / 3;
-    object-fit: cover;
+    max-width: 320px;
+    height: auto;
+    margin-inline: auto;
   }
 
   .experience__credentials > div {
@@ -231,10 +246,6 @@ import { education, experience, featuredSkills } from '../data/site';
       overflow-wrap: anywhere;
     }
 
-    .experience__credentials img {
-      aspect-ratio: 3 / 2;
-    }
-
     .experience__credentials ul {
       gap: 0.5rem;
       padding: 0;
@@ -243,7 +254,8 @@ import { education, experience, featuredSkills } from '../data/site';
 
     .experience__credentials li {
       padding: 0.4rem 0.55rem;
-      border: 2px solid var(--ink);
+      border: var(--component-border);
+      border-radius: var(--component-radius);
       background: var(--green);
     }
   }
