@@ -38,12 +38,16 @@ import { biographyGraph } from '../data/seo';
           <article>
             <h3>{project.name}</h3>
             <p>{project.description}</p>
-            <dl>
-              <div><dt>Problem</dt><dd>{project.focus.problem}</dd></div>
-              <div><dt>System design</dt><dd>{project.focus.systemDesign}</dd></div>
-              <div><dt>Evidence</dt><dd>{project.focus.evidence}</dd></div>
-              <div><dt>Outcome</dt><dd>{project.focus.outcome}</dd></div>
-            </dl>
+            {project.focus ? (
+              <dl>
+                <div><dt>Problem</dt><dd>{project.focus.problem}</dd></div>
+                <div><dt>System design</dt><dd>{project.focus.systemDesign}</dd></div>
+                <div><dt>Evidence</dt><dd>{project.focus.evidence}</dd></div>
+                <div><dt>Outcome</dt><dd>{project.focus.outcome}</dd></div>
+              </dl>
+            ) : (
+              <ul>{project.facts.map((fact) => <li>{fact}</li>)}</ul>
+            )}
             {project.links && <p>{project.links.map((link) => <a href={link.href}>{link.label}</a>)}</p>}
           </article>
         ))}

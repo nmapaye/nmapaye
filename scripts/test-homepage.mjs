@@ -327,10 +327,10 @@ test('homepage extraction keeps one canonical record for each project', async ()
   const html = await readHomepage();
   const text = visibleText(html);
   const claims = [
-    'Intermittent networks and low-power constraints make telemetry delivery unreliable.',
-    'Concurrent data-structure experiments need a small surface that makes correctness work explicit.',
-    'Canary releases need a clear decision path when service health changes.',
-    'Personal health signals need useful feedback without exporting sensitive data by default.',
+    'A battery-powered sensor on an unreliable network has to keep sampling on schedule when sends fail',
+    'A header-only C++20 library with two queues.',
+    'A Kubernetes operator in Go that watches a canary release.',
+    'I wanted to see how late-day caffeine affected my alertness',
   ];
 
   for (const claim of claims) {
@@ -369,7 +369,7 @@ test('project cards keep their existing semantic content while exposing four dec
   assert.equal((html.match(/class="project-card"/g) ?? []).length, 3);
   assert.match(html, /href="\/writing\/aurora-private-caffeine-tracking\/"/);
   assert.match(html, /href="https:\/\/github\.com\/nmapaye\/embnode"/);
-  assert.match(html, /Intermittent networks and low-power constraints make telemetry delivery unreliable\./);
+  assert.match(html, /A battery-powered sensor on an unreliable network has to keep sampling on schedule/);
   assert.doesNotMatch(cardStack, /card-stack__metadata/);
   assert.doesNotMatch(poster, /figcaption/);
   assert.match(projects, /\.work-feature__links\s*\{[\s\S]*?display:\s*flex;[\s\S]*?margin-top:\s*1\.5rem;/);
@@ -676,7 +676,7 @@ test('site data carries systems-first copy and structured project evidence', asy
 
   assert.match(
     source,
-    /Bay Area systems and embedded software engineer building C\+\+ concurrency libraries, FreeRTOS telemetry prototypes, application security tools, and dependable product interfaces\./,
+    /Bay Area systems and embedded software engineer building C\+\+ concurrency libraries, FreeRTOS telemetry prototypes, application security tools, and iOS apps\./,
   );
   assert.match(source, /label: 'Notes', href: '\/writing\/'/);
   assert.match(source, /name: 'EmbNode'/);
@@ -693,8 +693,8 @@ test('homepage work navigation targets rendered work and leads with systems evid
 
   assert.match(homepage, /href="\/#work"/);
   assert.match(homepage, /<section id="work"/);
-  assert.match(homepage, /Intermittent networks and low-power constraints make telemetry delivery unreliable/);
-  assert.match(homepage, /Host contract tests exercise packet validation/);
+  assert.match(homepage, /A battery-powered sensor on an unreliable network/);
+  assert.match(homepage, /Host tests feed in truncated frames, bad CRCs/);
 });
 
 test('work chapter leads with EmbNode and keeps structured evidence for every project', async () => {
@@ -721,7 +721,7 @@ test('work chapter leads with EmbNode and keeps structured evidence for every pr
   assert.match(text, /01\s*\/\s*Work/i);
   assert.match(text, /EmbNode/);
   assert.match(text, /CRC16/);
-  assert.match(text, /Contract tests/);
+  assert.match(text, /Frame checksum/);
   assert.match(text, /C\+\+17/);
   assert.match(text, /Problem/);
   assert.match(text, /System design/);
@@ -735,10 +735,10 @@ test('work chapter leads with EmbNode and keeps structured evidence for every pr
   assert.match(visibleText(embNode), /DMA/);
   assert.match(gitOps, /href="https:\/\/github\.com\/nmapaye\/gitops"/);
   assert.match(visibleText(gitOps), /Prometheus/);
-  assert.match(visibleText(gitOps), /rollback path triggers/);
+  assert.match(visibleText(gitOps), /Rollback finished in under 30 seconds/);
   assert.match(sysLib, /href="https:\/\/github\.com\/nmapaye\/syslib"/);
   assert.match(visibleText(sysLib), /SPSC/);
-  assert.match(visibleText(sysLib), /mutex-based MPMC/);
+  assert.match(visibleText(sysLib), /MPMC queue is a deque behind a mutex/);
   assert.match(aurora, /href="\/writing\/aurora-private-caffeine-tracking\/?"/);
   assert.doesNotMatch(workChapter, /0 cloud/i);
   assert.doesNotMatch(workChapter, /proof, not prose/i);
@@ -761,7 +761,7 @@ test('homepage renders the approved issue shell and cover', async () => {
   assert.match(text, /Operating range/);
   assert.match(text, /C\+\+23, FreeRTOS, ESP32 and STM32 telemetry/);
   assert.match(text, /Lock-free concurrency, atomics, Linux, Go, Kubernetes/);
-  assert.match(text, /Application security testing, vulnerability remediation, AI evaluation/);
+  assert.match(text, /Web application security testing, vulnerability triage and remediation/);
   assert.match(text, /01\s*\/\s*Work/i);
   assert.match(text, /02\s*\/\s*Experience/i);
   assert.match(text, /03\s*\/\s*Notes/i);
@@ -918,18 +918,16 @@ test('experience chapter emphasizes systems, security, and product', async () =>
     assert.match(text, new RegExp(organization));
   }
 
-  assert.match(text, /520\+ frontier AI outputs/i);
-  assert.match(text, /70\+ recurring failure patterns/i);
-  assert.match(text, /89% of reviewed cases/i);
-  assert.match(text, /30\+ assets/i);
+  assert.doesNotMatch(text, /520\+|70\+ recurring|89% of reviewed/i);
+  assert.match(text, /30\+ web, network, and control assets/i);
   assert.match(text, /27\+ vulnerabilities/i);
   assert.match(text, /OJK-regulated/i);
   assert.match(text, /8\+ repository-level software tasks/i);
   assert.match(text, /structured rubrics/i);
   assert.match(text, /16\+ high-severity web findings/i);
   assert.match(text, /five live data-center domains/i);
-  assert.match(text, /50\+ endpoints/i);
-  assert.match(text, /CVSS 8\.0\+ findings/i);
+  assert.match(text, /50\+ web endpoints/i);
+  assert.match(text, /CVSS 8\.0\+ issues/i);
   assert.match(text, /University of California, Santa Cruz/);
   assert.match(text, /B\.S\., Technology &amp; Information Management/);
   assert.match(text, /C\+\+23/);
