@@ -27,12 +27,14 @@ const secondary = projects.filter((project) => !project.featured);
         </div>
         <p class="work-feature__tagline">{featured.tagline}</p>
         <p>{featured.description}</p>
-        <dl class="project-focus">
-          <div><dt>Problem</dt><dd>{featured.focus.problem}</dd></div>
-          <div><dt>System design</dt><dd>{featured.focus.systemDesign}</dd></div>
-          <div><dt>Evidence</dt><dd>{featured.focus.evidence}</dd></div>
-          <div><dt>Outcome</dt><dd>{featured.focus.outcome}</dd></div>
-        </dl>
+        {featured.focus && (
+          <dl class="project-focus">
+            <div><dt>Problem</dt><dd>{featured.focus.problem}</dd></div>
+            <div><dt>System design</dt><dd>{featured.focus.systemDesign}</dd></div>
+            <div><dt>Evidence</dt><dd>{featured.focus.evidence}</dd></div>
+            <div><dt>Outcome</dt><dd>{featured.focus.outcome}</dd></div>
+          </dl>
+        )}
         <ul class="work-feature__stack" aria-label={`${featured.name} technologies`}>
           {featured.stack.map((tech) => <li>{tech}</li>)}
         </ul>
