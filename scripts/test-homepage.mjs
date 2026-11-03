@@ -252,8 +252,8 @@ test('built motion delivery keeps one shared module, stable posters, and writing
   assert.equal((html.match(/data-motion-shuffle(?:\s|=)/g) ?? []).length, 8);
   assert.equal((html.match(/data-motion-shake(?:\s|=)/g) ?? []).length, 5);
   assert.doesNotMatch(html, /data-motion-enhanced/);
-  assert.match(css, /@media \(forced-colors:\s*active\)/);
-  assert.match(css, /@media \(prefers-reduced-motion:\s*reduce\)/);
+  assert.match(css, /@media\s*\(forced-colors:\s*active\)/);
+  assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
   assert.match(css, /\.motion-layer[^}]*pointer-events:none/);
   assert.match(css, /\.glitch-text__visual[^}]*pointer-events:none/);
 
