@@ -128,6 +128,15 @@
   object-fit: cover;
 }
 
+.project-poster--grid {
+  height: 100%;
+  aspect-ratio: auto;
+}
+
+.project-poster--grid img {
+  object-fit: contain;
+}
+
 .project-poster--stack {
   height: 100%;
   aspect-ratio: auto;
@@ -171,7 +180,8 @@
 
 [data-motion-grid-tile] {
   position: absolute;
-  width: clamp(11rem, 22vw, 18rem);
+  width: 25%;
+  height: 25%;
   contain: layout paint style;
   transform: translate3d(var(--tile-x, 0px), var(--tile-y, 0px), 0);
 }
@@ -179,10 +189,11 @@
 [data-motion-grid][data-motion-enhanced] [data-motion-grid-tile] {
   left: 0 !important;
   top: 0 !important;
-  width: max(50%, 12rem);
+  width: 25%;
 }
 
 [data-motion-grid-bounce] {
+  height: 100%;
   transform: scale(var(--tile-bounce, 1));
   transition: transform 140ms cubic-bezier(.2, .8, .2, 1);
 }
@@ -281,7 +292,8 @@
 
 .card-stack {
   position: relative;
-  min-height: 14rem;
+  width: min(100%, 14rem);
+  height: 17.5rem;
   perspective: 900px;
   pointer-events: none;
 }

@@ -500,7 +500,7 @@ test('text shuffle overlays share their semantic label typography and geometry',
       declarations: [
         'margin-block:1rem',
         'font:900 clamp(4rem,10vw,8rem)/.82 var(--font-display)',
-        'letter-spacing:-.055em',
+        'letter-spacing:-.02em',
         'text-transform:uppercase',
         'overflow-wrap:anywhere',
       ],
