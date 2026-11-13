@@ -1,6 +1,13 @@
 from pathlib import Path
 import re
+import sys
 import unittest
+
+# Automatically resolve local .venv site-packages if available
+venv_lib = Path(__file__).resolve().parents[1] / ".venv" / "lib"
+for p in venv_lib.glob("python*/site-packages"):
+    if str(p) not in sys.path:
+        sys.path.insert(0, str(p))
 
 from pypdf import PdfReader
 

@@ -119,6 +119,12 @@ test('all public pages publish distinct recruiter-focused metadata without meta 
       title: 'Building AURORA, a Private React Native iOS App | Nathaniel Mapaye',
       description: 'How AURORA uses React Native, Swift, HealthKit, MMKV, caffeine logging, sleep data, and a vigilance test in a private iOS app.',
     },
+    {
+      path: 'tools/tiktok-face/index.html',
+      title: 'What TikTok Sees — On-Device Face Model Inspector | Nathaniel Mapaye',
+      description:
+        "Client-side MediaPipe facial landmark alignment and 16-bit fixed-point neural network inspector showing the attractiveness, age, gender, and mood scores TikTok's on-device models compute.",
+    },
   ];
   const titles = new Set();
   const descriptions = new Set();

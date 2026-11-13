@@ -1,0 +1,838 @@
+---
+import Base from '../../../layouts/Base.astro';
+
+const title = 'What TikTok Sees — On-Device Face Model Inspector | Nathaniel Mapaye';
+const description =
+  "Client-side MediaPipe facial landmark alignment and 16-bit fixed-point neural network inspector showing the attractiveness, age, gender, and mood scores TikTok's on-device models compute.";
+---
+
+<Base title={title} description={description} motion={false}>
+  <style is:inline>
+    @font-face {
+      font-family: 'Instrument';
+      src: url(/tools/tiktok-face/instrument.woff2) format('woff2');
+      font-display: swap;
+    }
+
+    :root {
+      --canvas: #f4f2ed;
+      --surface: #ffffff;
+      --ink: #171614;
+      --muted: #6e6a62;
+      --faint: #736e66;
+      --line: #e2ded5;
+      --accent: #2f4cf5;
+      --shadow: 0 1px 2px rgba(23, 22, 20, 0.04), 0 8px 24px -12px rgba(23, 22, 20, 0.12);
+      --grain-opacity: 0.035;
+      --sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      --display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+      color-scheme: light;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --canvas: #121211;
+        --surface: #1b1b19;
+        --ink: #f1efea;
+        --muted: #a29e95;
+        --faint: #8f8a82;
+        --line: #2a2926;
+        --accent: #93a6ff;
+        --shadow: 0 0 0 1px #2a2926;
+        --grain-opacity: 0.05;
+        color-scheme: dark;
+      }
+    }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      background: var(--canvas);
+      color: var(--ink);
+      font: 16px/1.5 var(--sans);
+      letter-spacing: 0;
+      -webkit-font-smoothing: antialiased;
+      padding-inline: max(20px, env(safe-area-inset-left));
+      padding-block: calc(env(safe-area-inset-top) + 32px) calc(env(safe-area-inset-bottom) + 40px);
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: var(--grain-opacity);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    main.tool {
+      position: relative;
+      max-width: 400px;
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
+      grid-template-columns: minmax(0, 1fr);
+      touch-action: manipulation;
+    }
+
+    main.tool:focus {
+      outline: none;
+    }
+
+    .tool a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .tool :is(a, button, input):focus-visible,
+    .sheet :is(button):focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+      border-radius: 6px;
+    }
+
+    .tool [hidden] {
+      display: none !important;
+    }
+
+    .tool-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .tool-nav a {
+      font-size: 13px;
+      color: var(--muted);
+      transition: color 0.15s;
+    }
+
+    .tool-nav a:hover {
+      color: var(--ink);
+      text-decoration: none;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: 18px;
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .top h1 {
+      margin: 0;
+      font-family: var(--sans);
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.3;
+      letter-spacing: -0.01em;
+    }
+
+    .top span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(96px, 148px) minmax(132px, 1fr);
+      gap: 16px;
+      align-items: end;
+    }
+
+    .pic {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--canvas);
+    }
+
+    #view {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .add {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-content: center;
+      justify-items: center;
+      gap: 6px;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+      border: 1px dashed var(--muted);
+      border-radius: 12px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .add:hover,
+    .add.over,
+    .add:focus-within {
+      color: var(--ink);
+      border-color: var(--ink);
+    }
+
+    .add b {
+      font-weight: 400;
+      font-size: 30px;
+      line-height: 1;
+    }
+
+    .tool input[type='file'] {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: none;
+    }
+
+    .scan {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 1px;
+      background: #fff;
+      box-shadow: 0 0 12px 2px rgba(255, 255, 255, 0.9);
+      animation: sweep 1s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+
+    @keyframes sweep {
+      to {
+        top: 100%;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .scan {
+        animation: none;
+      }
+
+      .add {
+        transition: none;
+      }
+    }
+
+    .score {
+      display: grid;
+      min-width: 0;
+    }
+
+    .lab {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .num {
+      font: 400 72px/0.95 'Instrument', ui-serif, Georgia, serif;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .facts {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 16px;
+      margin: 0;
+      border-block: 1px solid var(--line);
+      padding-block: 11px;
+    }
+
+    .facts div {
+      display: grid;
+      gap: 1px;
+      min-width: 0;
+    }
+
+    .facts dt {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .facts dd {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
+
+    .facts dd small {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--muted);
+      letter-spacing: 0;
+    }
+
+    .moodbox {
+      display: grid;
+      gap: 5px;
+    }
+
+    .moods {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-auto-flow: column;
+      grid-template-rows: repeat(4, auto);
+      column-gap: 16px;
+      row-gap: 5px;
+    }
+
+    .m {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13px;
+      line-height: 1.35;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .m:first-child {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    .acts {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      min-height: 22px;
+    }
+
+    .acts button,
+    .linkbtn {
+      position: relative;
+      height: auto;
+      min-height: 0;
+      border-radius: 0;
+      box-shadow: none;
+      background: none;
+      border: 0;
+      padding: 12px 0;
+      margin-block: -12px;
+      color: var(--ink);
+      font: 500 13px var(--sans);
+      cursor: pointer;
+      text-decoration: underline;
+      text-decoration-color: var(--line);
+      text-underline-offset: 3px;
+      overflow: hidden;
+    }
+
+    .acts button:hover,
+    .linkbtn:hover {
+      text-decoration-color: var(--ink);
+    }
+
+    #done {
+      margin-left: auto;
+    }
+
+    .linkbtn:focus-within {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+      border-radius: 2px;
+    }
+
+    .msg-line {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      padding: 5px 10px;
+      border-radius: 99px;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      font: 600 12px var(--sans);
+      white-space: nowrap;
+      pointer-events: none;
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+    }
+
+    .card[data-state='adjust'] .hero {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .card[data-state='adjust'] .score,
+    .card[data-state='adjust'] .facts,
+    .card[data-state='adjust'] .moodbox {
+      display: none;
+    }
+
+    .card[data-state='adjust'] .pic {
+      cursor: grab;
+      touch-action: none;
+    }
+
+    .card[data-state='adjust'] .pic:active {
+      cursor: grabbing;
+    }
+
+    .card[data-state='adjust'] .scan {
+      display: none;
+    }
+
+    .busy .num,
+    .busy .facts dd,
+    .busy .moods {
+      opacity: 0.3;
+      transition: opacity 0.15s;
+    }
+
+    .hist {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .strip {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      scroll-snap-type: x proximity;
+      overscroll-behavior-x: contain;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding: 2px;
+      margin: -2px;
+    }
+
+    .strip::-webkit-scrollbar {
+      display: none;
+    }
+
+    .h {
+      flex: none;
+      height: auto;
+      min-height: 0;
+      border-radius: 0;
+      box-shadow: none;
+      scroll-snap-align: start;
+      display: grid;
+      gap: 4px;
+      justify-items: center;
+      width: 72px;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--ink);
+      cursor: pointer;
+      font: 500 12px var(--sans);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .h img {
+      display: block;
+      width: 72px;
+      height: 72px;
+      border-radius: 10px;
+      object-fit: cover;
+      box-shadow: 0 0 0 1px var(--line);
+    }
+
+    .h[aria-pressed='true'] img {
+      box-shadow: 0 0 0 2px var(--ink);
+    }
+
+    .hist.masked img {
+      filter: blur(5px);
+      clip-path: inset(0 round 10px);
+    }
+
+    .h-x {
+      flex: none;
+      align-self: center;
+      margin-top: -20px;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: none;
+      color: var(--faint);
+      font: 400 18px/1 var(--sans);
+      cursor: pointer;
+    }
+
+    .tool-foot {
+      margin: 0;
+      text-align: center;
+      color: var(--faint);
+      font-size: 11px;
+    }
+
+    .tool-foot a {
+      color: inherit;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .chip {
+      position: absolute;
+      right: 6px;
+      bottom: 6px;
+      height: auto;
+      padding: 3px 8px;
+      border: 0;
+      border-radius: 99px;
+      background: rgba(0, 0, 0, 0.55);
+      color: #fff;
+      font: 600 11px var(--sans);
+      font-variant-numeric: tabular-nums;
+      cursor: pointer;
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+    }
+
+    .px {
+      position: absolute;
+      right: 6px;
+      top: 6px;
+      width: 26px;
+      height: 26px;
+      min-height: 0;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.45);
+      color: #fff;
+      box-shadow: none;
+      cursor: pointer;
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+    }
+
+    .px::after {
+      content: '';
+      position: absolute;
+      inset: -8px;
+    }
+
+    .px[aria-pressed='true'] {
+      background: #fff;
+      color: #171614;
+    }
+
+    .px svg {
+      display: block;
+      width: 12px;
+      height: 12px;
+      fill: currentColor;
+    }
+
+    .sheet {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      max-height: none;
+      margin: 0;
+      padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right))
+        max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+      border: 0;
+      background: #121211;
+      overflow: hidden;
+      overscroll-behavior: contain;
+      container-type: size;
+    }
+
+    .sheet[open] {
+      display: grid;
+      place-items: center;
+    }
+
+    .sheet::backdrop {
+      background: none;
+    }
+
+    html:has(.sheet[open]) {
+      overflow: hidden;
+    }
+
+    .sheet-in {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+      width: min(calc(100vw - 28px), calc((100vh - 84px) * 0.8), 420px);
+      width: min(100cqw, calc((100cqh - 56px) * 0.8), 420px);
+    }
+
+    .sheet-in:focus {
+      outline: 0;
+    }
+
+    .sheet canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 4 / 5;
+      border-radius: 14px;
+    }
+
+    .sheet-x {
+      position: absolute;
+      right: 6px;
+      top: 6px;
+      width: 28px;
+      height: 28px;
+      min-height: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.5);
+      color: #fff;
+      font: 400 20px/1 var(--sans);
+      box-shadow: none;
+      cursor: pointer;
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+    }
+
+    .sheet-acts {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(0, 1fr);
+      gap: 10px;
+    }
+
+    .sheet-acts button {
+      height: 44px;
+      min-height: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 99px;
+      box-shadow: none;
+      font: 600 14px var(--sans);
+      cursor: pointer;
+    }
+
+    #cardpx {
+      background: #2c2c2a;
+      color: #fff;
+    }
+
+    #send {
+      background: #fff;
+      color: #171614;
+    }
+
+    #send:disabled {
+      opacity: 0.5;
+    }
+
+    .frame {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .frame i {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border: 0 solid #fff;
+      filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.6));
+    }
+
+    .frame i:nth-child(1) {
+      top: 8px;
+      left: 8px;
+      border-width: 2px 0 0 2px;
+    }
+
+    .frame i:nth-child(2) {
+      top: 8px;
+      right: 8px;
+      border-width: 2px 2px 0 0;
+    }
+
+    .frame i:nth-child(3) {
+      bottom: 8px;
+      left: 8px;
+      border-width: 0 0 2px 2px;
+    }
+
+    .frame i:nth-child(4) {
+      bottom: 8px;
+      right: 8px;
+      border-width: 0 2px 2px 0;
+    }
+
+    .frame u {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.55);
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .frame u:nth-of-type(1),
+    .frame u:nth-of-type(2) {
+      top: 0;
+      bottom: 0;
+      width: 1px;
+    }
+
+    .frame u:nth-of-type(1) {
+      left: 33.33%;
+    }
+
+    .frame u:nth-of-type(2) {
+      left: 66.66%;
+    }
+
+    .frame u:nth-of-type(3),
+    .frame u:nth-of-type(4) {
+      left: 0;
+      right: 0;
+      height: 1px;
+    }
+
+    .frame u:nth-of-type(3) {
+      top: 33.33%;
+    }
+
+    .frame u:nth-of-type(4) {
+      top: 66.66%;
+    }
+
+    .pic.moving .frame u {
+      opacity: 1;
+    }
+  </style>
+
+  <main id="main-content" class="tool" tabindex="-1">
+    <nav class="tool-nav" aria-label="Site">
+      <a class="a-home" href="/">← nmapaye.com</a>
+    </nav>
+
+    <section class="card" id="card" data-state="empty">
+      <header class="top">
+        <h1>What TikTok sees</h1>
+        <span>Stays on your device</span>
+      </header>
+
+      <div class="hero">
+        <div class="pic" id="pic">
+          <canvas id="view" width="512" height="512" aria-label="Your cropped photo" hidden></canvas>
+          <label class="add" id="add">
+            <b>+</b>Add a photo<input id="file" type="file" accept="image/*" aria-label="Add a photo" />
+          </label>
+          <div class="scan" id="scan" hidden></div>
+          <div class="frame" id="guides" hidden>
+            <i></i><i></i><i></i><i></i><u></u><u></u><u></u><u></u>
+          </div>
+          <button
+            type="button"
+            class="px"
+            id="px"
+            aria-label="Pixelate face"
+            aria-pressed="false"
+            hidden
+          >
+            <svg viewBox="0 0 14 14" aria-hidden="true">
+              <path d="M0 0h4v4H0zM10 0h4v4h-4zM5 5h4v4H5zM0 10h4v4H0zM10 10h4v4h-4z"></path>
+            </svg>
+          </button>
+          <button type="button" class="chip" id="next" aria-label="Next face" hidden></button>
+          <div class="msg-line" id="msg" role="status" hidden></div>
+        </div>
+        <div class="score">
+          <span class="lab">Attractiveness</span>
+          <div class="num" id="attr">–</div>
+        </div>
+      </div>
+
+      <dl class="facts">
+        <div>
+          <dt>Age guess</dt>
+          <dd id="age">–</dd>
+        </div>
+        <div>
+          <dt>Gender guess</dt>
+          <dd id="gender">–</dd>
+        </div>
+      </dl>
+
+      <div class="moodbox">
+        <span class="lab">Mood</span>
+        <div class="moods" id="moods">
+          <div class="m"><span>Happy</span><span>–</span></div>
+          <div class="m"><span>Neutral</span><span>–</span></div>
+          <div class="m"><span>Sad</span><span>–</span></div>
+          <div class="m"><span>Surprise</span><span>–</span></div>
+          <div class="m"><span>Angry</span><span>–</span></div>
+          <div class="m"><span>Fear</span><span>–</span></div>
+          <div class="m"><span>Disgust</span><span>–</span></div>
+        </div>
+      </div>
+
+      <div class="acts">
+        <button type="button" id="sample">Try a sample</button>
+        <label class="linkbtn" id="newbtn" hidden>
+          New photo<input id="file2" type="file" accept="image/*" aria-label="Choose a new photo" />
+        </label>
+        <button type="button" id="adjust" hidden>Adjust crop</button>
+        <button type="button" id="done" hidden>Done</button>
+        <button type="button" id="share" hidden>Share</button>
+      </div>
+    </section>
+
+    <section class="hist" id="hist" aria-label="Recent scans" hidden>
+      <div class="strip" id="strip"></div>
+    </section>
+
+    <dialog class="sheet" id="sheet" aria-label="Share your result">
+      <div class="sheet-in" tabindex="-1" autofocus="">
+        <canvas id="cardview" width="1080" height="1350" role="img" aria-label="Your share card"></canvas>
+        <button type="button" class="sheet-x" id="sheetx" aria-label="Close">×</button>
+        <div class="sheet-acts">
+          <button type="button" id="cardpx">Pixelate face</button>
+          <button type="button" id="send">Save</button>
+        </div>
+      </div>
+    </dialog>
+
+    <p class="tool-foot">
+      Not affiliated with TikTok · Runs 100% on your device · <a href="/">nmapaye.com</a>
+    </p>
+  </main>
+
+  <script is:inline type="module">
+    import '/tools/tiktok-face/tool.mjs';
+  </script>
+</Base>

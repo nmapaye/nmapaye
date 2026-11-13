@@ -58,7 +58,7 @@ const resume = `${base}/${profile.resume}`.replace(/\/+/g, '/');
     z-index: 2;
     width: min(100% - 2rem, var(--max-width));
     margin-inline: auto;
-    padding-block: clamp(5rem, 12vw, 9rem) 3rem;
+    padding-block: clamp(5rem, 12vw, 9rem) calc(clamp(3rem, 6vw, 5.5rem) + 2rem);
   }
 
   .cover h1 {
