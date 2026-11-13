@@ -58,6 +58,19 @@ const secondary = projects.filter((project) => !project.featured);
   <div class="work__grid">
     {secondary.map((project) => <ProjectCard project={project} />)}
   </div>
+
+  <div class="work-lab">
+    <div class="work-lab__copy">
+      <p class="chapter__label">Interactive Lab / On-Device ML</p>
+      <h4>What TikTok Sees</h4>
+      <p>
+        Client-side MediaPipe facial landmark alignment and 16-bit fixed-point neural network
+        inspector showing the attractiveness, age, gender, and mood scores TikTok's on-device
+        models compute—with zero server uploads.
+      </p>
+    </div>
+    <a class="btn btn--primary" href="/tools/tiktok-face/">Launch TikTok Face tool ↗</a>
+  </div>
 </section>
 
 <style>
@@ -87,7 +100,7 @@ const secondary = projects.filter((project) => !project.featured);
   .work-feature__copy .glitch-text {
     margin-block: 1rem;
     font: 900 clamp(4rem, 10vw, 8rem)/0.82 var(--font-display);
-    letter-spacing: -0.055em;
+    letter-spacing: -0.02em;
     text-transform: uppercase;
     overflow-wrap: anywhere;
   }
@@ -182,6 +195,34 @@ const secondary = projects.filter((project) => !project.featured);
   .work__grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .work-lab {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: clamp(1.5rem, 4vw, 2.5rem) max(1rem, calc((100vw - var(--max-width)) / 2));
+    background: var(--paper);
+  }
+
+  .work-lab__copy {
+    max-width: 58ch;
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .work-lab__copy h4 {
+    font: 900 clamp(1.6rem, 3vw, 2.5rem)/0.95 var(--font-display);
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+  }
+
+  .work-lab .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   @media (max-width: 959px) {

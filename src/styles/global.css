@@ -101,7 +101,7 @@ ul {
 .display {
   font-family: var(--font-display);
   font-weight: 900;
-  letter-spacing: -0.055em;
+  letter-spacing: -0.02em;
   line-height: 0.82;
   overflow-wrap: anywhere;
   text-transform: uppercase;
