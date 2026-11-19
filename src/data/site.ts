@@ -98,7 +98,7 @@ export const nav: NavItem[] = [
 
 export const announcement: Announcement = {
   title: 'What TikTok Sees',
-  cta: 'Try the tool',
+  cta: 'Try the demo',
   href: '/tools/tiktok-face/',
   expiresAt: '2026-12-03T17:00:00Z',
 };
