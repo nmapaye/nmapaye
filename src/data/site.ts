@@ -97,10 +97,10 @@ export const nav: NavItem[] = [
 ];
 
 export const announcement: Announcement = {
-  title: 'AI untuk Olympic, OFFO Living, dan Technohome',
-  cta: 'View all 4 PDFs',
-  href: 'https://drive.google.com/drive/folders/1SQIFiL1dMYHlsRJAZjIGK5RunMxWDTG7',
-  expiresAt: '2026-09-04T09:27:00Z',
+  title: 'What TikTok Sees',
+  cta: 'Try the tool',
+  href: '/tools/tiktok-face/',
+  expiresAt: '2026-12-03T17:00:00Z',
 };
 
 export const featuredSkills = [

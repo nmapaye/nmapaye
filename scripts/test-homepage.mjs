@@ -1081,17 +1081,25 @@ test('homepage source composes only the final homepage sections', async () => {
   );
 });
 
-test('homepage removes the expired shared-document announcement', async () => {
+test('homepage places the tool announcement below the masthead until it expires', async () => {
   const html = await readHomepage();
-  const banner = html.match(/<aside class="announcement"[\s\S]*?<\/aside>/)?.[0] ?? '';
+  const banner = html.match(/<aside class="announcement"[\s\S]*?<\/aside>/)?.[0];
   const mastheadPosition = html.indexOf('<header class="masthead"');
-  const bannerPosition = html.indexOf('<aside class="announcement"');
   const mainPosition = html.indexOf('<main id="main-content"');
+  const expiry = '2026-12-03T17:00:00Z';
 
   assert.ok(mastheadPosition >= 0 && mastheadPosition < mainPosition);
-  assert.equal(bannerPosition, -1);
-  assert.equal(banner, '');
+  if (Date.now() >= Date.parse(expiry)) {
+    assert.equal(banner, undefined);
+    return;
+  }
 
+  assert.ok(banner);
+  const bannerPosition = html.indexOf(banner);
+  assert.ok(mastheadPosition < bannerPosition && bannerPosition < mainPosition);
+  assert.ok(banner.includes(`data-announcement-expires-at="${expiry}"`));
+  assert.ok(banner.includes('href="/tools/tiktok-face/"'));
+  assert.ok(banner.includes('What TikTok Sees'));
 });
 
 test('homepage retains accessible destinations, a fixed palette, and resilient interaction contracts', async () => {

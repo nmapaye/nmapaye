@@ -10,17 +10,15 @@ const isActive = Number.isFinite(expiry) && Date.now() < expiry;
     class="announcement"
     data-announcement
     data-announcement-expires-at={announcement.expiresAt}
-    aria-label="Shared documents"
+    aria-label="Site announcement"
   >
     <a
       class="announcement__link"
       href={announcement.href}
-      target="_blank"
-      rel="noopener noreferrer"
     >
-      <span class="announcement__label">Limited release</span>
+      <span class="announcement__label">New tool</span>
       <strong>{announcement.title}</strong>
-      <span class="announcement__cta">{announcement.cta} <span aria-hidden="true">↗</span></span>
+      <span class="announcement__cta">{announcement.cta} <span aria-hidden="true">→</span></span>
     </a>
   </aside>
 )}
