@@ -1,5 +1,5 @@
 ---
-import { profile, links } from '../data/site';
+import { profile, links, visibleSocial } from '../data/site';
 const year = new Date().getFullYear();
 ---
 
@@ -8,9 +8,9 @@ const year = new Date().getFullYear();
   <span>© {year} {profile.name}</span>
   <nav aria-label="Footer">
     <a href="/tools/tiktok-face/">TikTok Face</a>
+    <a href={links.aurora} rel="noopener">Aurora</a>
     <a href={`mailto:${links.email}`}>Email</a>
-    <a href={links.linkedin} rel="noopener">LinkedIn</a>
-    <a href={links.github} rel="noopener">GitHub</a>
+    {visibleSocial.map((item) => <a href={item.href} rel="noopener">{item.label}</a>)}
   </nav>
 </footer>
 
