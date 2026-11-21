@@ -23,7 +23,7 @@ Building AURORA started with a question from myself :P how can I monitor my caff
 
 Most people (sane ones at that) would understand that drinking caffeine past 2pm is a poor idea, but I wanted to take the idea one step further and understand just how bad taking caffeine would be at unideal points in time!
 
-Some of my use-cases so far have been when I'm travelling and need to stay awake on flights, or during busy study/work sessions that require me to keep concentrated focus, and the PVT system I implemented acting as a safety guard against being fatigued while driving (and funnily enough an working as addictive game between my friends to determine whose the most alert!)
+Some of my use-cases so far have been when I'm travelling and need to stay awake on flights, or during busy study/work sessions that require me to keep concentrated focus, and the PVT system I implemented, which lets me compare how alert I feel with a measured result (and funnily enough an working as addictive game between my friends to determine whose the most alert!)
 
 Anyways below is some AI-slop which was generated as essentially a long README if you're interested about the metal of it all, please enjoy the readthrough, and more importantly, thank you for taking the time to read my little blog!
 
