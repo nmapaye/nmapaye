@@ -127,8 +127,32 @@ export const links = {
   email: 'nmapaye@ucsc.edu',
   linkedin: 'https://www.linkedin.com/in/nmapaye',
   github: 'https://github.com/nmapaye',
-  aurora: 'https://nmapaye.github.io/aurora',
+  aurora: 'https://aurora.nmapaye.com',
+  auroraSource: 'https://github.com/nmapaye/aurora',
 };
+
+/* ----------------------------------------------------------------- social -- */
+/**
+ * Profiles shown in the footer. An entry renders only when `href` is set.
+ * Add a URL only after the account exists and Nathan has confirmed it's his.
+ */
+export interface SocialLink {
+  label: string;
+  href?: string;
+}
+
+export const social: SocialLink[] = [
+  { label: 'LinkedIn', href: links.linkedin },
+  { label: 'GitHub', href: links.github },
+  { label: 'TikTok' },
+  { label: 'YouTube' },
+  { label: 'Instagram' },
+  { label: 'X' },
+];
+
+export const visibleSocial = social.filter(
+  (item): item is Required<SocialLink> => Boolean(item.href),
+);
 
 /* -------------------------------------------------------------- education -- */
 export const education: EducationItem[] = [
@@ -222,37 +246,36 @@ export const projects: Project[] = [
   {
     index: '04',
     name: 'AURORA',
-    tagline: 'Private React Native iOS caffeine and sleep tracker',
+    tagline: 'Native SwiftUI iOS caffeine and sleep tracker',
     period: 'Aug 2025 – Present',
     description:
-      'An iPhone and iPad app for logging caffeine, checking daily intake, and running a 60-second reaction test for alertness. Sleep data comes in through optional read-only Apple Health access, and everything stays on the device.',
+      'An iPhone and iPad app for logging caffeine and sleep, with a short reaction test that records reaction times. Apple Health access is optional, and logs stay on the device. The code is public.',
     facts: [
-      'Three workflows: caffeine logging, intake dashboards, and vigilance testing',
-      'AsyncStorage and SQLite provide two-layer local-first persistence',
-      'Normalized caffeine inputs across automatic and manual logging paths',
+      'Native SwiftUI app on a shared Swift core package',
+      'Optional, read-only Apple Health sleep and caffeine import',
+      'No account and no analytics SDK',
     ],
     focus: {
-      problem: 'I wanted to see how late-day caffeine affected my alertness without sending caffeine and sleep data to a server.',
-      systemDesign: 'React Native with a Swift bridge to HealthKit. Sleep samples are cleaned up (reversed intervals and duplicates dropped) before the rest of the app reads them.',
+      problem: 'I wanted to keep track of caffeine and sleep without sending either to a server.',
+      systemDesign: 'A native SwiftUI app on a Swift core package. It started in React Native and was rebuilt natively in October 2026. Sleep samples are cleaned up (reversed intervals and duplicates dropped) before the rest of the app reads them.',
       evidence: 'Tests cover Health access granted, denied, unavailable, and empty, plus malformed and duplicate sleep samples.',
-      outcome: 'The app works fully with Health access denied. I use the reaction test before long drives, and my friends use it to compete over who is most alert.',
+      outcome: 'The app works fully with Health access denied. It is heading to a free TestFlight beta.',
     },
     metrics: [
-      { value: '60 sec', label: 'Vigilance test' },
+      { value: 'SwiftUI', label: 'Native app' },
       { value: 'Read-only', label: 'Apple Health access' },
       { value: 'iOS + iPad', label: 'Product surface' },
     ],
     stack: [
-      'React Native',
-      'TypeScript',
       'Swift',
+      'SwiftUI',
       'Apple HealthKit',
-      'AsyncStorage',
-      'SQLite',
+      'Swift Package Manager',
     ],
     links: [
-      { label: 'Read AURORA case study', href: '/writing/aurora-private-caffeine-tracking/' },
-      { label: 'View AURORA demo', href: 'https://nmapaye.github.io/aurora' },
+      { label: 'Visit aurora.nmapaye.com', href: 'https://aurora.nmapaye.com' },
+      { label: 'View AURORA source', href: 'https://github.com/nmapaye/aurora' },
+      { label: 'Read the AURORA case study', href: '/writing/aurora-private-caffeine-tracking/' },
     ],
   },
 ];
