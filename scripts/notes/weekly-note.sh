@@ -5,7 +5,9 @@
 #   1. Gathers last week's activity from PUBLIC nmapaye repos only (commits, merged PRs, releases).
 #   2. Drafts one note with `claude -p` (falls back to `codex exec`) in Nathan's voice from WRITING_STYLE.md.
 #   3. Puts it in src/content/writing/ on a branch, opens a PR, and merges it normally once
-#      the required checks pass (auto-merge if the repo allows it), then dispatches the Pages deploy.
+#      the required checks pass (auto-merge if the repo allows it). The job ends at the merge to main:
+#      nmapaye.com is served by OpenAI Sites, and the Codex automation
+#      'publish-portfolio-updates-to-openai-sites' (daily 9 AM / 5 PM PT) publishes main.
 #
 # Safety rails:
 #   - No WRITING_STYLE.md            -> skip and log (never write in a generic voice).
@@ -154,8 +156,8 @@ fi
 if gh pr checks "$PR_URL" --watch --required --interval 30 >/dev/null 2>&1; then
   state="$(gh pr view "$PR_URL" --json state --jq .state)"
   [[ "$state" == "MERGED" ]] || gh pr merge "$PR_URL" --merge
-  log "merged $PR_URL"
-  gh workflow run deploy.yml -R "$SITE_REPO" --ref main && log "dispatched Pages deploy"
+  log "merged $PR_URL into main. nmapaye.com is served by OpenAI Sites; the Codex automation"
+  log "'publish-portfolio-updates-to-openai-sites' (daily 9 AM and 5 PM PT) publishes main. This job stops here."
 else
   log "checks failed on $PR_URL; left open for Nathan"
   exit 1
