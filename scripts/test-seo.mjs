@@ -107,7 +107,7 @@ test('all public pages publish distinct recruiter-focused metadata without meta 
     {
       path: 'writing/index.html',
       title: 'Systems and Embedded Software Notes | Nathaniel Mapaye',
-      description: 'First-hand engineering case studies by Nathaniel Mapaye on embedded systems, C++ concurrency, React Native iOS apps, application security, and private on-device software.',
+      description: 'First-hand engineering case studies by Nathaniel Mapaye on embedded systems, C++ concurrency, iOS apps, application security, and private on-device software.',
     },
     {
       path: 'writing/ai-olympic-offo-technohome-public-archive/index.html',
@@ -218,7 +218,8 @@ test('homepage publishes one canonical professional identity', async () => {
   assert.ok(person.knowsAbout.includes('Kubernetes'));
   assert.ok(person.knowsAbout.includes('React Native'));
   assert.ok(person.knowsAbout.includes('Apple HealthKit'));
-  assert.equal(projectList.itemListElement.length, 3);
+  assert.equal(projectList.itemListElement.length, 4);
+  assert.match(projectList.itemListElement[3].item.codeRepository, /github\.com\/nmapaye\/aurora/);
   assert.equal(projectList.itemListElement[0].item['@type'], 'SoftwareSourceCode');
   assert.match(projectList.itemListElement[0].item.codeRepository, /github\.com\/nmapaye\/embnode/);
   assert.deepEqual(projectList.itemListElement[0].item.keywords, [
@@ -281,9 +282,12 @@ test('all public pages omit private and legacy identity details', async () => {
 test('homepage describes AURORA using its current on-device implementation', async () => {
   const html = await readOutput('index.html');
 
-  assert.match(html, /optional read-only Apple Health access/i);
-  assert.match(html, /AsyncStorage/);
-  assert.match(html, /SQLite/);
+  assert.match(html, /Apple Health access is optional/i);
+  assert.match(html, /Native SwiftUI/);
+  assert.match(html, /href="https:\/\/aurora\.nmapaye\.com"/);
+  assert.match(html, /href="https:\/\/github\.com\/nmapaye\/aurora"/);
+  assert.doesNotMatch(html, /React Native iOS caffeine/);
+  assert.doesNotMatch(html, /60-second|60 sec|long drives/i);
   assert.doesNotMatch(html, /MMKV/);
 });
 
@@ -363,7 +367,7 @@ test('AURORA case study publishes grounded BlogPosting authorship', async () => 
     'Building AURORA',
   );
   assert.equal(article.datePublished, '2026-07-27T00:00:00.000Z');
-  assert.equal(article.dateModified, '2026-07-27T00:00:00.000Z');
+  assert.equal(article.dateModified, '2026-11-20T00:00:00.000Z');
   assert.equal(article.image, `${canonicalUrl}profile.jpg`);
   assert.deepEqual(article.author, {
     '@type': 'Person',

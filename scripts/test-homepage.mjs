@@ -330,7 +330,7 @@ test('homepage extraction keeps one canonical record for each project', async ()
     'A battery-powered sensor on an unreliable network has to keep sampling on schedule when sends fail',
     'A header-only C++20 library with two queues.',
     'A Kubernetes operator in Go that watches a canary release.',
-    'I wanted to see how late-day caffeine affected my alertness',
+    'I wanted to keep track of caffeine and sleep without sending either to a server.',
   ];
 
   for (const claim of claims) {
@@ -756,8 +756,9 @@ test('homepage renders the approved issue shell and cover', async () => {
   assert.match(html, /<main id="main-content"[^>]*tabindex="-1"[^>]*>/);
   assert.match(text, /NM\s*\/\s*Issue 01/i);
   assert.match(text, /SYSTEMS\s*TO\s*SCREENS/i);
-  assert.match(text, /Bay Area systems and embedded software engineer/);
-  assert.match(text, /Explore embedded systems projects/);
+  assert.match(text, /Firmware, security, an iOS app\. I post what broke\./);
+  assert.match(text, /See the work/);
+  assert.match(html, /href="https:\/\/aurora\.nmapaye\.com"/);
   assert.match(text, /Operating range/);
   assert.match(text, /C\+\+23, FreeRTOS, ESP32 and STM32 telemetry/);
   assert.match(text, /Lock-free concurrency, atomics, Linux, Go, Kubernetes/);
@@ -812,7 +813,8 @@ test('notes and contact close the issue with the approved voice and photos', asy
   assert.match(notesImage, /srcset="[^"]+\.webp 640w, [^"]+\.webp 960w, [^"]+\.webp 1280w, [^"]+\.webp 1600w"/);
   assert.match(html, /id="contact"/);
   assert.match(text, /04\s*\/\s*Contact/i);
-  assert.match(text, /LET[’']S\s*BUILD/i);
+  assert.match(text, /SAY\s*HI\./i);
+  assert.match(text, /Also open to internships and early-career roles/);
   assert.ok(contactImage, 'Contact renders the approved portrait photograph');
   assert.match(contactImage, /loading="lazy"/);
   assert.match(contactImage, /src="\/_astro\/contact-portrait\.[^"]+\.webp"/);

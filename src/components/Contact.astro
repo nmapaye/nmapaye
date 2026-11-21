@@ -1,7 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import contactPhoto from '../assets/portfolio/contact-portrait.png';
-import { links, profile } from '../data/site';
+import { links, profile, visibleSocial } from '../data/site';
 const base = import.meta.env.BASE_URL;
 const resume = `${base}/${profile.resume}`.replace(/\/+/g, '/');
 ---
@@ -9,13 +9,15 @@ const resume = `${base}/${profile.resume}`.replace(/\/+/g, '/');
 <section id="contact" class="chapter contact" aria-labelledby="contact-title">
   <div class="contact__copy">
     <p class="chapter__label">04 / Contact</p>
-    <h2 id="contact-title" class="display" data-motion-shake>Let’s build.</h2>
-    <p>Open to Bay Area and remote internships and early-career roles in systems, embedded software, application security, and product engineering.</p>
+    <h2 id="contact-title" class="display" data-motion-shake>Say hi.</h2>
+    <p>Questions about a project or a note are welcome.</p>
+    <p class="contact__aside">Also open to internships and early-career roles in systems, embedded software, security, and product engineering.</p>
     <div class="contact__links">
       <a class="btn btn--primary" data-motion-burst data-motion-shake-related="contact-title" href={`mailto:${links.email}`}>Email</a>
       <a class="btn" data-motion-burst data-motion-shake-related="contact-title" href={resume}>Resume</a>
-      <a class="btn" data-motion-burst data-motion-shake-related="contact-title" href={links.linkedin} rel="noopener">LinkedIn</a>
-      <a class="btn" data-motion-burst data-motion-shake-related="contact-title" href={links.github} rel="noopener">GitHub</a>
+      {visibleSocial.map((item) => (
+        <a class="btn" data-motion-burst data-motion-shake-related="contact-title" href={item.href} rel="noopener">{item.label}</a>
+      ))}
     </div>
   </div>
   <div class="photo-frame contact__portrait">
@@ -50,6 +52,11 @@ const resume = `${base}/${profile.resume}`.replace(/\/+/g, '/');
     max-width: 48ch;
     font-size: clamp(1.1rem, 2.5vw, 1.5rem);
     font-weight: 700;
+  }
+
+  .contact__copy > p.contact__aside {
+    font-size: 0.95rem;
+    font-weight: 500;
   }
 
   .contact__links {
